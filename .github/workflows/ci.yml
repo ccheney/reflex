@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  REFLEX_MOCK_PROVIDER: 1
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Keep in sync with `.cargo/config.toml` (target-dir = ".target").
+          workspaces: |
+            . -> .target
+          # Share cache between jobs in this workflow (check/test).
+          shared-key: ci
+      - name: Check Format
+        run: cargo fmt -- --check
+      - name: Check Lint
+        run: cargo clippy --all-targets -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.16.2
+        ports:
+          - 6334:6334
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Keep in sync with `.cargo/config.toml` (target-dir = ".target").
+          workspaces: |
+            . -> .target
+          # Share cache between jobs in this workflow (check/test).
+          shared-key: ci
+      - name: Run Tests (Default)
+        run: cargo test
+        env:
+          REFLEX_QDRANT_URL: http://localhost:6334
+      - name: Run Real Integration Tests
+        run: cargo test --test integration_real
+        env:
+          REFLEX_QDRANT_URL: http://localhost:6334

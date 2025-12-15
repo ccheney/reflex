@@ -1,0 +1,75 @@
+services:
+  reflex:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GPU_BACKEND: ${GPU_BACKEND:-cpu}
+        RELEASE: ${RELEASE:-true}
+    container_name: reflex
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.data:/data
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - REFLEX_PORT=8080
+      - REFLEX_BIND_ADDR=0.0.0.0
+      - REFLEX_STORAGE_PATH=/data
+      - REFLEX_QDRANT_URL=http://qdrant:6334
+      - REFLEX_L1_CAPACITY=${REFLEX_L1_CAPACITY:-10000}
+      - REFLEX_MODEL_PATH=${REFLEX_MODEL_PATH:-}
+      - REFLEX_RERANKER_PATH=${REFLEX_RERANKER_PATH:-}
+      - REFLEX_RERANKER_THRESHOLD=${REFLEX_RERANKER_THRESHOLD:-}
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/reflex", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - reflex-network
+
+  qdrant:
+    image: qdrant/qdrant:v1.16.2
+    container_name: reflex-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./.qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__LOG_LEVEL=${QDRANT_LOG_LEVEL:-INFO}
+      - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bash",
+          "-lc",
+          "exec 3<>/dev/tcp/127.0.0.1/6333 && printf 'GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q '200'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - reflex-network
+
+networks:
+  reflex-network:
+    driver: bridge
+    name: reflex-network
+
+volumes:
+  reflex-data:
+    driver: local
+  qdrant-data:
+    driver: local

@@ -1,0 +1,17 @@
+{
+  // Force asdf to select the project's Rust toolchain even when rust-analyzer
+  // runs commands from outside the repo (e.g. inside sysroot sources).
+	// keep synced to ../.tool-versions
+  "rust-analyzer.server.extraEnv": {
+    "ASDF_RUST_VERSION": "1.92.0"
+  },
+  "rust-analyzer.cargo.extraEnv": {
+    "ASDF_RUST_VERSION": "1.92.0"
+  },
+  "rust-analyzer.check.extraEnv": {
+    "ASDF_RUST_VERSION": "1.92.0"
+  },
+  "rust-analyzer.runnables.extraEnv": {
+    "ASDF_RUST_VERSION": "1.92.0"
+  }
+}
