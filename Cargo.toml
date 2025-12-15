@@ -1,6 +1,6 @@
 [package]
 name = "reflex-cache"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Episodic memory and high-speed semantic cache for LLM responses"
 license = "AGPL-3.0"
@@ -8,7 +8,7 @@ repository = "https://github.com/ccheney/reflex"
 documentation = "https://docs.rs/reflex-cache"
 keywords = ["llm", "cache", "semantic", "embedding", "ai"]
 categories = ["caching", "database"]
-rust-version = "1.85"
+rust-version = "1.92"
 
 [package.metadata.docs.rs]
 all-features = true
