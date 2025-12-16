@@ -1,6 +1,6 @@
 [package]
 name = "reflex-cache"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2024"
 description = "Episodic memory and high-speed semantic cache for LLM responses"
 license = "AGPL-3.0"
