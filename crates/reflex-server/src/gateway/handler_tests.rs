@@ -14,16 +14,16 @@ use std::sync::Arc;
 use tempfile::TempDir;
 use tower::ServiceExt;
 
+use crate::gateway::create_router_with_state;
+use crate::gateway::error::GatewayError;
+use crate::gateway::payload::CachePayload;
+use crate::gateway::state::HandlerState;
 use reflex::cache::{
     BqSearchBackend, L1CacheHandle, L2Config, L2SemanticCache, NvmeStorageLoader,
     REFLEX_STATUS_HEADER, ReflexStatus, TieredCache,
 };
 use reflex::embedding::RerankerConfig;
 use reflex::embedding::sinter::{SinterConfig, SinterEmbedder};
-use crate::gateway::create_router_with_state;
-use crate::gateway::error::GatewayError;
-use crate::gateway::payload::CachePayload;
-use crate::gateway::state::HandlerState;
 use reflex::scoring::CrossEncoderScorer;
 use reflex::vectordb::bq::MockBqClient;
 
@@ -1301,10 +1301,10 @@ mod direct_handler_tests {
 mod l1_cache_hit_tests {
     use super::*;
     use crate::gateway::handler::chat_completions_handler;
-    use reflex::storage::CacheEntry;
     use axum::Json;
     use axum::extract::State;
     use axum::http::HeaderMap;
+    use reflex::storage::CacheEntry;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -1414,14 +1414,14 @@ mod l1_cache_hit_tests {
 
 mod l2_l3_verification_tests {
     use super::*;
-    use reflex::cache::{L1CacheHandle, L2Config, L2SemanticCache, MockStorageLoader, TieredCache};
-    use reflex::embedding::sinter::{SinterConfig, SinterEmbedder};
     use crate::gateway::handler::chat_completions_handler;
-    use reflex::storage::CacheEntry;
-    use reflex::vectordb::bq::MockBqClient;
     use axum::Json;
     use axum::extract::State;
     use axum::http::HeaderMap;
+    use reflex::cache::{L1CacheHandle, L2Config, L2SemanticCache, MockStorageLoader, TieredCache};
+    use reflex::embedding::sinter::{SinterConfig, SinterEmbedder};
+    use reflex::storage::CacheEntry;
+    use reflex::vectordb::bq::MockBqClient;
 
     const L2_TEST_COLLECTION: &str = "l2_test_collection";
 

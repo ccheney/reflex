@@ -111,6 +111,7 @@ impl LifecycleConfig {
     }
 
     #[cfg(test)]
+    /// Creates a minimal configuration for tests that need lifecycle state.
     pub fn for_testing(gcs_bucket: &str, local_path: PathBuf) -> Self {
         Self {
             gcs_bucket: gcs_bucket.to_string(),

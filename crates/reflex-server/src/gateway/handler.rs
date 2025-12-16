@@ -12,13 +12,13 @@ use futures_util::stream;
 use std::convert::Infallible;
 use tracing::{debug, error, info, instrument};
 
-use reflex::cache::{
-    BqSearchBackend, REFLEX_STATUS_HEADER, ReflexStatus, StorageLoader, TieredLookupResult,
-};
 use crate::gateway::error::GatewayError;
 use crate::gateway::payload::CachePayload;
 use crate::gateway::state::HandlerState;
 use crate::gateway::streaming::handle_streaming_request;
+use reflex::cache::{
+    BqSearchBackend, REFLEX_STATUS_HEADER, ReflexStatus, StorageLoader, TieredLookupResult,
+};
 use reflex::payload::TauqEncoder;
 use reflex::scoring::VerificationResult;
 use reflex::storage::{ArchivedCacheEntry, CacheEntry, StorageWriter};

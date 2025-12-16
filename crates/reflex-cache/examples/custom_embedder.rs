@@ -10,4 +10,3 @@ fn main() -> Result<()> {
     println!("dim={}", embedding.len());
     Ok(())
 }
-

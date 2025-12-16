@@ -57,7 +57,6 @@ impl MockVectorDbClient {
 }
 
 /// Computes cosine similarity between two f32 vectors.
-
 impl VectorDbClient for MockVectorDbClient {
     async fn ensure_collection(&self, name: &str, vector_size: u64) -> Result<(), VectorDbError> {
         let mut collections =

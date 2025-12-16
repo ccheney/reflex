@@ -9,13 +9,13 @@ pub mod bq;
 pub mod client;
 /// Vector DB error types.
 pub mod error;
+#[cfg(any(test, feature = "mock"))]
+/// In-memory vector DB mock (enabled with `mock` feature).
+pub mod mock;
 /// Shared vector DB model types.
 pub mod model;
 /// Full-precision rescoring utilities.
 pub mod rescoring;
-#[cfg(any(test, feature = "mock"))]
-/// In-memory vector DB mock (enabled with `mock` feature).
-pub mod mock;
 
 #[cfg(test)]
 mod tests;

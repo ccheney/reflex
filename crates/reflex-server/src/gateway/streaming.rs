@@ -11,9 +11,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::error;
 
-use reflex::cache::BqSearchBackend;
 use crate::gateway::adapter::adapt_openai_to_genai;
 use crate::gateway::error::GatewayError;
+use reflex::cache::BqSearchBackend;
 
 /// Handles streaming chat completion requests, bypassing the semantic cache.
 ///

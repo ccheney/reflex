@@ -23,4 +23,3 @@ async fn main() -> Result<()> {
 fn main() {
     eprintln!("Run with: cargo run --example basic_lookup --features mock");
 }
-
