@@ -59,7 +59,7 @@ Embed in your own app:
 
 ```toml
 [dependencies]
-reflex = { package = "reflex-cache", version = "0.1.2" }
+reflex = { package = "reflex-cache", version = "x.x.x" } # replace with latest
 ```
 
 ---

@@ -10,7 +10,7 @@ Docs: https://docs.rs/reflex-cache
 
 ```toml
 [dependencies]
-reflex = { package = "reflex-cache", version = "0.1.2" }
+reflex = { package = "reflex-cache", version = "x.x.x" } # replace with latest
 ```
 
 ## Quick Start
