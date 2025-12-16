@@ -59,6 +59,6 @@ jobs:
         env:
           REFLEX_QDRANT_URL: http://localhost:6334
       - name: Run Real Integration Tests
-        run: cargo test --test integration_real
+        run: cargo test -p reflex-server --test integration_real
         env:
           REFLEX_QDRANT_URL: http://localhost:6334
