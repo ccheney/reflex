@@ -27,176 +27,58 @@
 
 ---
 
-## Why Reflex?
+## What It Is
 
-Every time your coding agent asks "How do I center a div?" it costs you tokens. Every time it asks "What's the syntax for centering a div in CSS?" it costs you tokens *again*---even though you already have a perfectly good answer sitting in your logs.
-
-**The problem is threefold:**
-
-| Pain Point | What Happens | The Cost |
-|------------|--------------|----------|
-| **Duplicate queries** | Agents ask semantically identical questions | You pay for the same answer repeatedly |
-| **Context bloat** | JSON responses eat precious context window | Agents hit token limits faster |
-| **Cold starts** | Every session starts from scratch | No institutional memory |
-
-**Reflex solves this** by sitting between your agent and the LLM provider:
-
-```
-Agent  --->  Reflex  --->  OpenAI/Anthropic/etc.
-               |
-               v
-         [Cache Hit?]
-               |
-      Yes: Return instantly (~1ms)
-       No: Forward, cache response, return
-```
-
-**The killer feature:** Reflex doesn't just cache---it compresses. Responses are returned in **[Tauq](https://github.com/epistates/tauq) format**, a semantic encoding that cuts token overhead by ~40%. Your agent gets the same information in fewer tokens, extending its effective context window.
+Reflex is an **OpenAI-compatible HTTP cache** for LLM responses: it sits between your agent/app and the provider, returning cached answers instantly and storing misses for later reuse. Cached responses are returned in [Tauq](https://github.com/epistates/tauq) format to reduce token overhead.
 
 ---
 
-## Quick Start
+## Quick Start (Server)
 
 ```bash
 # 1. Start Qdrant (vector database)
 docker run -d -p 6334:6334 -p 6333:6333 qdrant/qdrant
 
-# 2. Run Reflex
-cargo run --release
+# 2. Run Reflex (HTTP server)
+cargo run -p reflex-server --release
 
 # 3. Point your agent to localhost:8080
 export OPENAI_BASE_URL=http://localhost:8080/v1
 ```
 
-That's it. Your existing OpenAI-compatible code works unchanged.
+---
+
+## Crates In This Repo
+
+- **Server + binary (`reflex`)**: `crates/reflex-server/README.md`
+- **Core library (embedded use)**: `crates/reflex-cache/README.md` (docs.rs: https://docs.rs/reflex-cache)
 
 ---
 
-## How It Works
-
-Reflex uses a **tiered cache architecture** that balances speed with semantic understanding:
+## How It Works (High Level)
 
 ```
-                    Request
-                       │
-                       ▼
-              ┌────────────────┐
-              │   L1: Exact    │  <-- Hash lookup (~0.1ms)
-              │   (In-Memory)  │      Identical requests return instantly
-              └───────┬────────┘
-                      │ Miss
-                      ▼
-              ┌────────────────┐
-              │  L2: Semantic  │  <-- Vector search (~5ms)
-              │   (Qdrant)     │      "Center a div" ≈ "CSS centering"
-              └───────┬────────┘
-                      │ Candidates found
-                      ▼
-              ┌────────────────┐
-              │ L3: Verification│ <-- Cross-encoder (~10ms)
-              │  (ModernBERT)   │     Ensures intent actually matches
-              └───────┬────────┘
-                      │ Verified / No match
-                      ▼
-              ┌────────────────┐
-              │   Provider     │  <-- Forward to OpenAI/Anthropic
-              │   (Upstream)   │      Cache response for next time
-              └────────────────┘
+Request → L1 (exact) → L2 (semantic) → L3 (rerank/verify) → Provider
 ```
 
-### Cache Tiers Explained
-
-| Tier | What It Does | When It Hits | Latency |
-|------|--------------|--------------|---------|
-| **L1 Exact** | Blake3 hash match on serialized request | Identical JSON payloads | <1ms |
-| **L2 Semantic** | Embedding similarity via Qdrant | "How to sort?" ~ "Sorting algorithm?" | ~5ms |
-| **L3 Verification** | Cross-encoder reranking | Confirms semantic match is valid | ~10ms |
-
-The L3 verification step is critical: it prevents false positives from L2. Just because two questions are *similar* doesn't mean they have the same *answer*. The cross-encoder ensures the cached response actually answers the new question.
+- **L1**: exact match (fast, in-memory)
+- **L2**: semantic retrieval (Qdrant vector search)
+- **L3**: verification (cross-encoder rerank to avoid false positives)
 
 ---
 
-## Features
+## Configuration (Server)
 
-- **OpenAI-Compatible API** --- Drop-in replacement. Change `base_url`, nothing else.
-- **Tiered Caching** --- L1 exact + L2 semantic + L3 verification
-- **[Tauq](https://github.com/epistates/tauq) Compression** --- ~40% token savings via semantic encoding
-- **Multi-Tenant** --- Isolated caches per API key
-- **GPU Acceleration** --- Metal (Apple Silicon) and CUDA support
-- **Zero-Copy Storage** --- Memory-mapped files via `rkyv` for instant deserialization
-- **Self-Hosted** --- Your data stays on your machine
-- **Graceful Lifecycle** --- Automatic state hydration/dehydration for cloud deployments
-
----
-
-## Installation
-
-### From Source (Recommended)
-
-```bash
-git clone https://github.com/ccheney/reflex.git
-cd reflex
-
-# CPU only
-cargo build --release
-
-# Apple Silicon (Metal)
-cargo build --release --features metal
-
-# NVIDIA GPU (CUDA)
-cargo build --release --features cuda
-```
-
-### Docker Compose
-
-```bash
-# CPU
-docker compose up -d
-
-# With GPU backend
-GPU_BACKEND=metal docker compose up -d
-```
-
-### Prerequisites
-
-- **Rust 2024 Edition** (nightly or 1.85+)
-- **Qdrant** vector database (included in docker-compose)
-- **Embedding model** (Qwen2-based, 1536-dim)
-- **Reranker model** (ModernBERT cross-encoder) [optional but recommended]
-
----
-
-## Configuration
-
-All configuration is via environment variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REFLEX_PORT` | HTTP port to bind | `8080` |
-| `REFLEX_BIND_ADDR` | IP address to bind | `127.0.0.1` |
-| `REFLEX_QDRANT_URL` | Qdrant gRPC endpoint | `http://localhost:6334` |
-| `REFLEX_STORAGE_PATH` | Path for mmap storage | `./.data` |
-| `REFLEX_L1_CAPACITY` | Max entries in L1 cache | `10000` |
-| `REFLEX_MODEL_PATH` | Path to embedding model | *Required for production* |
-| `REFLEX_RERANKER_PATH` | Path to reranker model | *Optional* |
-| `REFLEX_RERANKER_THRESHOLD` | L3 verification confidence (0.0-1.0) | `0.70` |
-
-### Cloud/Lifecycle Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REFLEX_GCS_BUCKET` | GCS bucket for state persistence | *Empty* |
-| `REFLEX_SNAPSHOT_PATH` | Local snapshot file path | `/mnt/nvme/reflex_data/snapshot.rkyv` |
-| `REFLEX_IDLE_TIMEOUT_SECS` | Idle timeout before shutdown | `900` (15 min) |
-| `REFLEX_CLOUD_PROVIDER` | Cloud provider (`gcp`, `local`) | `gcp` |
-
----
-
-## API Reference
-
-### `POST /v1/chat/completions`
-
-Fully OpenAI-compatible. Your existing code works unchanged.
+| Variable | Default |
+|----------|---------|
+| `REFLEX_PORT` | `8080` |
+| `REFLEX_BIND_ADDR` | `127.0.0.1` |
+| `REFLEX_QDRANT_URL` | `http://localhost:6334` |
+| `REFLEX_STORAGE_PATH` | `./.data` |
+| `REFLEX_L1_CAPACITY` | `10000` |
+| `REFLEX_MODEL_PATH` | *(unset → stub embedder)* |
+| `REFLEX_RERANKER_PATH` | *(optional)* |
+| `REFLEX_RERANKER_THRESHOLD` | `0.70` |
 
 **Request:**
 ```json
@@ -324,11 +206,11 @@ This prevents:
 cargo test
 
 # Run with debug logging
-RUST_LOG=debug cargo run
+RUST_LOG=debug cargo run -p reflex-server
 
 # Run specific integration tests (requires Qdrant)
 docker compose up -d qdrant
-cargo test --test integration_real
+cargo test -p reflex-server --test integration_real
 
 # Lint
 cargo clippy --all-targets -- -D warnings

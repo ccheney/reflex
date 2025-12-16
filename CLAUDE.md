@@ -10,13 +10,13 @@ Reflex is an episodic memory and semantic cache for LLM responses. It sits betwe
 
 ```bash
 # Build (CPU only - default)
-cargo build --release
+cargo build -p reflex-server --release
 
 # Build with Apple Silicon GPU acceleration
-cargo build --release --features metal
+cargo build -p reflex-server --release --features metal
 
 # Build with NVIDIA GPU acceleration
-cargo build --release --features cuda
+cargo build -p reflex-server --release --features cuda
 ```
 
 ## Running Tests
@@ -29,11 +29,11 @@ cargo test
 cargo test test_name
 
 # Run tests in a specific module
-cargo test cache::l1_tests
+cargo test -p reflex-cache cache::l1_tests
 
 # Run integration tests (requires Qdrant running)
 docker compose up -d qdrant
-REFLEX_QDRANT_URL=http://localhost:6334 cargo test --test integration_real
+REFLEX_QDRANT_URL=http://localhost:6334 cargo test -p reflex-server --test integration_real
 ```
 
 ## Linting and Formatting
@@ -56,10 +56,10 @@ cargo clippy --all-targets -- -D warnings
 docker compose up -d
 
 # Run with debug logging
-RUST_LOG=debug cargo run
+RUST_LOG=debug cargo run -p reflex-server
 
 # Production run
-cargo run --release
+cargo run -p reflex-server --release
 ```
 
 ## Architecture
@@ -71,23 +71,23 @@ Request → L1 (Exact Hash) → L2 (Semantic Search) → L3 (Cross-Encoder) → 
               <1ms              ~5ms                  ~10ms
 ```
 
-- **L1 Cache** (`src/cache/l1.rs`): Blake3 hash-based exact matching using Moka in-memory cache
-- **L2 Cache** (`src/cache/l2/`): Vector similarity search via Qdrant with binary quantization
-- **L3 Verification** (`src/scoring/`): ModernBERT cross-encoder reranking to filter false positives
-- **Tiered Orchestration** (`src/cache/tiered.rs`): Coordinates all cache tiers
+- **L1 Cache** (`crates/reflex-cache/src/cache/l1.rs`): Blake3 hash-based exact matching using Moka in-memory cache
+- **L2 Cache** (`crates/reflex-cache/src/cache/l2/`): Vector similarity search via Qdrant with binary quantization
+- **L3 Verification** (`crates/reflex-cache/src/scoring/`): ModernBERT cross-encoder reranking to filter false positives
+- **Tiered Orchestration** (`crates/reflex-cache/src/cache/tiered.rs`): Coordinates all cache tiers
 
 ### Key Modules
 
 | Module | Purpose |
 |--------|---------|
-| `src/gateway/` | Axum HTTP server with OpenAI-compatible API (`POST /v1/chat/completions`) |
-| `src/embedding/sinter/` | Qwen2-based embedder (1536-dim vectors); has `real.rs` and `stub.rs` variants |
-| `src/embedding/reranker/` | ModernBERT cross-encoder for L3 verification |
-| `src/vectordb/` | Qdrant client with binary quantization (`src/vectordb/bq/`) |
-| `src/storage/` | Memory-mapped (rkyv) and NVMe storage backends |
-| `src/payload/` | Tauq semantic encoding/decoding |
-| `src/lifecycle/` | GCP spot instance lifecycle management (hydrate/dehydrate) |
-| `src/config/` | Environment-based configuration |
+| `crates/reflex-server/src/gateway/` | Axum HTTP server with OpenAI-compatible API (`POST /v1/chat/completions`) |
+| `crates/reflex-cache/src/embedding/sinter/` | Qwen2-based embedder (1536-dim vectors); has `real.rs` and `stub.rs` variants |
+| `crates/reflex-cache/src/embedding/reranker/` | ModernBERT cross-encoder for L3 verification |
+| `crates/reflex-cache/src/vectordb/` | Qdrant client with binary quantization (`crates/reflex-cache/src/vectordb/bq/`) |
+| `crates/reflex-cache/src/storage/` | Memory-mapped (rkyv) and NVMe storage backends |
+| `crates/reflex-cache/src/payload/` | Tauq semantic encoding/decoding |
+| `crates/reflex-cache/src/lifecycle/` | GCP spot instance lifecycle management (hydrate/dehydrate) |
+| `crates/reflex-cache/src/config/` | Environment-based configuration |
 
 ### Cargo Features
 
@@ -98,13 +98,13 @@ Request → L1 (Exact Hash) → L2 (Semantic Search) → L3 (Cross-Encoder) → 
 
 ### Constants
 
-Embedding dimension is 1536 (defined in `src/constants.rs`). This is used throughout the codebase for vector operations.
+Embedding dimension is 1536 (defined in `crates/reflex-cache/src/constants.rs`). This is used throughout the codebase for vector operations.
 
 ## Testing Patterns
 
 - Unit tests are co-located with source files (e.g., `l1_tests.rs` alongside `l1.rs`)
-- Integration tests are in `tests/` directory
-- Test helpers are in `tests/common/`
+- Integration tests are in `crates/*/tests/` directories
+- Test helpers are in `crates/*/tests/common/`
 - Set `REFLEX_MOCK_PROVIDER=1` to bypass real LLM calls in CI
 - Tests use `serial_test` crate for tests that need exclusive resource access
 
@@ -126,5 +126,5 @@ Embedding dimension is 1536 (defined in `src/constants.rs`). This is used throug
 - Uses Rust 2024 edition with Rust 1.92.0
 - Error handling via `thiserror` for library errors, `anyhow` for application errors
 - Async runtime is Tokio with full features
-- Memory allocator is mimalloc (see `src/main.rs`)
+- Memory allocator is mimalloc (see `crates/reflex-server/src/main.rs`)
 - Build artifacts go to `.target/` (configured in `.cargo/config.toml`)
