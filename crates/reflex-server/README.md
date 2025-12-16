@@ -33,6 +33,16 @@ docker compose up -d
 - `GET /ready`
 - `POST /v1/chat/completions` (OpenAI-compatible)
 
+## Response Status
+
+Responses include `X-Reflex-Status`:
+
+- `hit-l1-exact`: exact request match
+- `hit-l3-verified`: semantic hit verified by L3
+- `miss`: forwarded to provider and stored
+
+The response `choices[].message.content` is **[Tauq](https://github.com/epistates/tauq)-encoded**.
+
 ## Configuration
 
 Most commonly used env vars:
@@ -48,6 +58,25 @@ Most commonly used env vars:
 | `REFLEX_RERANKER_PATH` | *(unset)* | Optional reranker |
 | `REFLEX_RERANKER_THRESHOLD` | `0.70` | L3 threshold |
 | `REFLEX_MOCK_PROVIDER` | *(unset)* | Set to bypass real provider calls |
+
+## Point Your Agent
+
+```bash
+export OPENAI_BASE_URL=http://localhost:8080/v1
+export OPENAI_API_KEY=sk-your-key
+```
+
+### Python (openai SDK)
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8080/v1", api_key="sk-your-key")
+resp = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Explain quicksort"}],
+)
+```
 
 ## GPU Features
 
@@ -74,4 +103,3 @@ Real integration tests (needs Qdrant):
 ```bash
 REFLEX_QDRANT_URL=http://localhost:6334 cargo test -p reflex-server --test integration_real
 ```
-

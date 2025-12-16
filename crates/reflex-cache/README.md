@@ -13,6 +13,14 @@ Docs: https://docs.rs/reflex-cache
 reflex = { package = "reflex-cache", version = "0.1.2" }
 ```
 
+## Quick Start
+
+From this repo:
+
+```bash
+cargo run -p reflex-cache --example basic_lookup --features mock
+```
+
 ## What’s Inside
 
 - `cache`: tiered cache orchestration (L1 exact + L2 semantic)
@@ -36,4 +44,3 @@ From repo root:
 cargo test -p reflex-cache
 cargo doc -p reflex-cache --no-deps
 ```
-

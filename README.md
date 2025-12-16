@@ -48,6 +48,22 @@ export OPENAI_BASE_URL=http://localhost:8080/v1
 
 ---
 
+## Quick Start (Library)
+
+```bash
+# Run the library example (no HTTP server)
+cargo run -p reflex-cache --example basic_lookup --features mock
+```
+
+Embed in your own app:
+
+```toml
+[dependencies]
+reflex = { package = "reflex-cache", version = "0.1.2" }
+```
+
+---
+
 ## Crates In This Repo
 
 - **Server + binary (`reflex`)**: `crates/reflex-server/README.md`
@@ -67,175 +83,13 @@ Request → L1 (exact) → L2 (semantic) → L3 (rerank/verify) → Provider
 
 ---
 
-## Configuration (Server)
-
-| Variable | Default |
-|----------|---------|
-| `REFLEX_PORT` | `8080` |
-| `REFLEX_BIND_ADDR` | `127.0.0.1` |
-| `REFLEX_QDRANT_URL` | `http://localhost:6334` |
-| `REFLEX_STORAGE_PATH` | `./.data` |
-| `REFLEX_L1_CAPACITY` | `10000` |
-| `REFLEX_MODEL_PATH` | *(unset → stub embedder)* |
-| `REFLEX_RERANKER_PATH` | *(optional)* |
-| `REFLEX_RERANKER_THRESHOLD` | `0.70` |
-
-**Request:**
-```json
-{
-  "model": "gpt-4o",
-  "messages": [
-    {"role": "user", "content": "How do I center a div in CSS?"}
-  ]
-}
-```
-
-**Response (Cache Hit):**
-```json
-{
-  "id": "chatcmpl-abc123",
-  "object": "chat.completion",
-  "model": "gpt-4o",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "! def\n: semantic_request \"How do I center a div in CSS?\"\n: response !\n  : content \"Use flexbox: display: flex; justify-content: center; align-items: center;\""
-    },
-    "finish_reason": "stop"
-  }]
-}
-```
-
-The `content` field contains **[Tauq](https://github.com/epistates/tauq)-encoded** data. Your agent can parse this to extract:
-- The original semantic request (for verification)
-- The cached response content
-
-**Response Headers:**
-| Header | Values | Meaning |
-|--------|--------|---------|
-| `X-Reflex-Status` | `hit-l1-exact` | L1 cache hit (identical request) |
-| | `hit-l3-verified` | L2 candidate verified by L3 |
-| | `miss` | Cache miss, forwarded to provider |
-
-### `GET /healthz`
-
-Liveness probe. Returns `200 OK` if the server is running.
-
-### `GET /ready`
-
-Readiness probe. Returns `200 OK` when Qdrant is connected and storage is operational.
-
----
-
-## Usage with Coding Agents
-
-### Claude Code / Aider / Continue
-
-```bash
-# Set the base URL to Reflex
-export OPENAI_BASE_URL=http://localhost:8080/v1
-export OPENAI_API_KEY=sk-your-key  # Still needed for cache misses
-
-# Run your agent as normal
-aider --model gpt-4o
-```
-
-### Python (openai SDK)
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:8080/v1",
-    api_key="sk-your-key"
-)
-
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[{"role": "user", "content": "Explain quicksort"}]
-)
-```
-
-### async-openai (Rust)
-
-```rust
-use async_openai::{Client, config::OpenAIConfig};
-
-let config = OpenAIConfig::new()
-    .with_api_base("http://localhost:8080/v1");
-let client = Client::with_config(config);
-```
-
----
-
-## Architecture Deep Dive
-
-### Storage Layer
-
-Reflex uses **rkyv** for zero-copy deserialization. Cached responses are memory-mapped directly from disk---no parsing, no allocation, no delay.
-
-```
-.data/
-├── {tenant_id}/
-│   ├── {context_hash}.rkyv    # Archived CacheEntry
-│   └── ...
-```
-
-### Embedding Pipeline
-
-1. **Tokenization** --- Qwen2 tokenizer (8192 max sequence length)
-2. **Embedding** --- Sinter embedder (1536-dim vectors)
-3. **Indexing** --- Binary quantization in Qdrant for efficient ANN search
-
-### Verification Pipeline
-
-The L3 cross-encoder takes `(query, candidate)` pairs and outputs a relevance score. Only candidates exceeding the threshold (default 0.70) are considered valid cache hits.
-
-This prevents:
-- "How to sort ascending?" returning cached "How to sort descending?" answer
-- "Python quicksort" returning cached "Rust quicksort" implementation
-- False positives from embedding similarity alone
-
----
-
 ## Development
 
 ```bash
-# Run tests
 cargo test
-
-# Run with debug logging
-RUST_LOG=debug cargo run -p reflex-server
-
-# Run specific integration tests (requires Qdrant)
-docker compose up -d qdrant
-cargo test -p reflex-server --test integration_real
-
-# Lint
 cargo clippy --all-targets -- -D warnings
-
-# Format
-cargo fmt
+cargo fmt -- --check
 ```
-
-### Test Modes
-
-| Environment Variable | Effect |
-|---------------------|--------|
-| `REFLEX_MOCK_PROVIDER=1` | Bypass real LLM calls (for CI) |
-
----
-
-## Roadmap
-
-- [ ] Streaming response caching
-- [ ] Cache invalidation API
-- [ ] Prometheus metrics endpoint
-- [ ] Multi-model embedding support
-- [ ] Redis L1 backend option
-
----
 
 ## License
 
