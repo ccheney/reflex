@@ -91,10 +91,6 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt -- --check
 ```
 
-## License
-
-[AGPL-3.0](LICENSE) --- Free as in freedom. If you modify Reflex and distribute it (including as a service), you must release your modifications under the same license.
-
 ---
 
 <p align="center">

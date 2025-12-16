@@ -41,6 +41,6 @@ cargo run -p reflex-cache --example basic_lookup --features mock
 From repo root:
 
 ```bash
-cargo test -p reflex-cache
+cargo test -p reflex-cache --features mock
 cargo doc -p reflex-cache --no-deps
 ```

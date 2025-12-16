@@ -55,7 +55,11 @@ jobs:
           # Share cache between jobs in this workflow (check/test).
           shared-key: ci
       - name: Run Tests (Default)
-        run: cargo test
+        run: cargo test -p reflex-cache --features mock
+        env:
+          REFLEX_QDRANT_URL: http://localhost:6334
+      - name: Run Server Tests
+        run: cargo test -p reflex-server
         env:
           REFLEX_QDRANT_URL: http://localhost:6334
       - name: Run Real Integration Tests

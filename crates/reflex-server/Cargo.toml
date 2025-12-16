@@ -1,9 +1,12 @@
 [package]
 name = "reflex-server"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
+description = "OpenAI-compatible HTTP gateway for Reflex cache"
 license = "AGPL-3.0"
 repository = "https://github.com/ccheney/reflex"
+documentation = "https://docs.rs/reflex-server"
+readme = "README.md"
 rust-version = "1.92"
 
 [lib]
@@ -21,7 +24,7 @@ metal = ["reflex/metal"]
 cuda = ["reflex/cuda"]
 
 [dependencies]
-reflex = { package = "reflex-cache", path = "../reflex-cache" }
+reflex = { package = "reflex-cache", version = "0.2.1", path = "../reflex-cache" }
 
 tokio = { version = "1.48", features = ["full"] }
 mimalloc = { version = "0.1", default-features = false }
@@ -48,7 +51,7 @@ uuid = { version = "1.19.0", features = ["v4", "fast-rng"] }
 chrono = "0.4.42"
 
 [dev-dependencies]
-reflex = { package = "reflex-cache", path = "../reflex-cache", features = ["mock"] }
+reflex = { package = "reflex-cache", version = "0.2.1", path = "../reflex-cache", features = ["mock"] }
 tempfile = "3.15"
 tower = { version = "0.5", features = ["util"] }
 hyper = { version = "1.0", features = ["full"] }

@@ -2580,14 +2580,10 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "futures",
- "futures-util",
  "parking_lot",
  "prost",
  "prost-types",
- "reqwest",
  "semver",
- "serde",
- "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tonic",
@@ -2833,7 +2829,7 @@ dependencies = [
 
 [[package]]
 name = "reflex-cache"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2849,7 +2845,6 @@ dependencies = [
  "moka",
  "parking_lot",
  "qdrant-client",
- "reflex-cache",
  "reqwest",
  "rkyv",
  "serde",
@@ -2865,7 +2860,7 @@ dependencies = [
 
 [[package]]
 name = "reflex-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-openai",
