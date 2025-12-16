@@ -66,8 +66,8 @@ reflex = { package = "reflex-cache", version = "0.1.2" }
 
 ## Crates In This Repo
 
-- **Server + binary (`reflex`)**: `crates/reflex-server/README.md`
-- **Core library (embedded use)**: `crates/reflex-cache/README.md` (docs.rs: https://docs.rs/reflex-cache)
+- **Server + binary (`reflex`)**: [crates/reflex-server](crates/reflex-server/README.md)
+- **Core library (embedded use)**: [crates/reflex-cache](crates/reflex-cache/README.md) (docs.rs: https://docs.rs/reflex-cache)
 
 ---
 
