@@ -17,7 +17,7 @@ WORKDIR /app
 FROM chef AS planner
 
 COPY Cargo.toml Cargo.lock* ./
-COPY src ./src
+COPY crates ./crates
 
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --recipe-path recipe.json
 
 COPY Cargo.toml Cargo.lock* ./
-COPY src ./src
+COPY crates ./crates
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
@@ -65,6 +65,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     $(if [ "$RELEASE" = "true" ]; then echo "--release"; fi) \
     --no-default-features \
     --features "$GPU_BACKEND" \
+    -p reflex-server \
     --bin reflex \
     && cp /app/target/$(if [ "$RELEASE" = "true" ]; then echo "release"; else echo "debug"; fi)/reflex /app/reflex-binary
 
@@ -85,7 +86,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --recipe-path recipe.json
 
 COPY Cargo.toml Cargo.lock* ./
-COPY src ./src
+COPY crates ./crates
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
@@ -94,6 +95,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     $(if [ "$RELEASE" = "true" ]; then echo "--release"; fi) \
     --no-default-features \
     --features "$GPU_BACKEND" \
+    -p reflex-server \
     --bin reflex \
     && cp /app/target/$(if [ "$RELEASE" = "true" ]; then echo "release"; else echo "debug"; fi)/reflex /app/reflex-binary
 
@@ -114,7 +116,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --recipe-path recipe.json
 
 COPY Cargo.toml Cargo.lock* ./
-COPY src ./src
+COPY crates ./crates
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
@@ -123,6 +125,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     $(if [ "$RELEASE" = "true" ]; then echo "--release"; fi) \
     --no-default-features \
     --features "$GPU_BACKEND" \
+    -p reflex-server \
     --bin reflex \
     && cp /app/target/$(if [ "$RELEASE" = "true" ]; then echo "release"; else echo "debug"; fi)/reflex /app/reflex-binary
 
