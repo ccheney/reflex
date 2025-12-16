@@ -7,6 +7,7 @@ use crate::vectordb::{
 };
 
 #[derive(Default, Clone)]
+/// In-memory mock implementation of a binary-quantized vector DB client.
 pub struct MockBqClient {
     collections: std::sync::Arc<std::sync::RwLock<HashMap<String, MockBqCollection>>>,
     config: BqConfig,
@@ -29,10 +30,12 @@ struct MockBqPoint {
 }
 
 impl MockBqClient {
+    /// Creates a default mock client.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Creates a mock client with an explicit config.
     pub fn with_config(config: BqConfig) -> Self {
         Self {
             collections: std::sync::Arc::new(std::sync::RwLock::new(HashMap::new())),
@@ -40,6 +43,7 @@ impl MockBqClient {
         }
     }
 
+    /// Returns the number of points currently stored in `collection`.
     pub fn point_count(&self, collection: &str) -> Option<usize> {
         self.collections
             .read()
@@ -63,6 +67,7 @@ impl MockBqClient {
         let _ = handle.join();
     }
 
+    /// Ensures a BQ collection exists.
     pub async fn ensure_bq_collection(
         &self,
         name: &str,
@@ -86,6 +91,7 @@ impl MockBqClient {
         Ok(())
     }
 
+    /// Upserts points into a mock collection.
     pub async fn upsert_points(
         &self,
         collection: &str,
@@ -133,6 +139,7 @@ impl MockBqClient {
         Ok(())
     }
 
+    /// Searches the mock BQ collection.
     pub async fn search_bq(
         &self,
         collection: &str,
@@ -222,6 +229,7 @@ impl MockBqClient {
         Ok(results)
     }
 
+    /// Deletes points by id.
     pub async fn delete_points(
         &self,
         collection: &str,

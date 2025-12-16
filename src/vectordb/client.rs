@@ -10,12 +10,14 @@ use super::model::{SearchResult, VectorPoint};
 use crate::vectordb::WriteConsistency;
 
 #[derive(Clone)]
+/// Direct Qdrant client wrapper.
 pub struct QdrantClient {
     client: Qdrant,
     url: String,
 }
 
 impl QdrantClient {
+    /// Creates a client for `url`.
     pub async fn new(url: &str) -> Result<Self, VectorDbError> {
         let client =
             Qdrant::from_url(url)
@@ -31,14 +33,17 @@ impl QdrantClient {
         })
     }
 
+    /// Returns the underlying Qdrant client.
     pub fn client(&self) -> &Qdrant {
         &self.client
     }
 
+    /// Returns the configured URL.
     pub fn url(&self) -> &str {
         &self.url
     }
 
+    /// Performs a basic health check request.
     pub async fn health_check(&self) -> Result<(), VectorDbError> {
         self.client
             .health_check()
@@ -50,6 +55,7 @@ impl QdrantClient {
         Ok(())
     }
 
+    /// Creates a collection with cosine distance.
     pub async fn create_collection(
         &self,
         name: &str,
@@ -72,6 +78,7 @@ impl QdrantClient {
         Ok(())
     }
 
+    /// Ensures a collection exists (creates it if missing).
     pub async fn ensure_collection(
         &self,
         name: &str,
@@ -91,6 +98,7 @@ impl QdrantClient {
         Ok(())
     }
 
+    /// Returns `true` if the collection exists.
     pub async fn collection_exists(&self, name: &str) -> Result<bool, VectorDbError> {
         self.client.collection_exists(name).await.map_err(|e| {
             VectorDbError::CreateCollectionFailed {
@@ -100,6 +108,7 @@ impl QdrantClient {
         })
     }
 
+    /// Upserts points into a collection.
     pub async fn upsert_points(
         &self,
         collection: &str,
@@ -138,6 +147,7 @@ impl QdrantClient {
         Ok(())
     }
 
+    /// Searches a collection by vector similarity.
     pub async fn search(
         &self,
         collection: &str,
@@ -171,6 +181,7 @@ impl QdrantClient {
         Ok(results)
     }
 
+    /// Deletes points by id.
     pub async fn delete_points(
         &self,
         collection: &str,
@@ -201,13 +212,17 @@ impl QdrantClient {
         Ok(())
     }
 }
+
+/// Minimal async interface used by higher-level code.
 pub trait VectorDbClient: Send + Sync {
+    /// Ensures a collection exists.
     fn ensure_collection(
         &self,
         name: &str,
         vector_size: u64,
     ) -> impl std::future::Future<Output = Result<(), VectorDbError>> + Send;
 
+    /// Upserts points.
     fn upsert_points(
         &self,
         collection: &str,
@@ -215,6 +230,7 @@ pub trait VectorDbClient: Send + Sync {
         consistency: WriteConsistency,
     ) -> impl std::future::Future<Output = Result<(), VectorDbError>> + Send;
 
+    /// Searches for similar points.
     fn search(
         &self,
         collection: &str,
@@ -223,6 +239,7 @@ pub trait VectorDbClient: Send + Sync {
         tenant_filter: Option<u64>,
     ) -> impl std::future::Future<Output = Result<Vec<SearchResult>, VectorDbError>> + Send;
 
+    /// Deletes points.
     fn delete_points(
         &self,
         collection: &str,

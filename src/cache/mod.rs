@@ -1,8 +1,18 @@
-//! L1 exact-match cache and L2 integration.
+//! Tiered caching infrastructure.
+//!
+//! Reflex uses:
+//! - **L1**: exact-match lookup (in-memory)
+//! - **L2**: semantic search (vector DB)
+//!
+//! Start at [`TieredCache`] and [`TieredLookupResult`].
 
+/// L1 exact-match cache.
 pub mod l1;
+/// L2 semantic cache.
 pub mod l2;
+/// L1+L2 tiered cache wrapper.
 pub mod tiered;
+/// Status/header types shared across the cache pipeline.
 pub mod types;
 
 #[cfg(test)]

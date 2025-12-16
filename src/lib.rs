@@ -1,36 +1,48 @@
-//! Reflex library crate (used by the server and integration tests).
+//! # Reflex Cache
 //!
-//! # Public API Surface
+//! Episodic memory + semantic cache for LLM responses.
 //!
-//! This crate exposes a large public API to support both the server binary and
-//! integration tests. The exports are organized by module:
+//! Reflex sits between a client (agent/server) and an LLM provider.
 //!
-//! ## Core Types (Stable)
-//! - [`Config`], [`ConfigError`] - Server configuration
-//! - [`CacheEntry`] - Storage format for cached responses
-//! - [`TieredCache`], [`L1CacheHandle`], [`L2SemanticCache`] - Cache infrastructure
-//! - [`CrossEncoderScorer`], [`VerificationResult`] - L3 verification
+//! ```text
+//! Request → L1 (exact) → L2 (semantic) → L3 (rerank) → Provider
+//! ```
 //!
-//! ## Embedding & Scoring
-//! - [`SinterEmbedder`], [`SinterConfig`] - Embedding generation
-//! - [`Reranker`], [`RerankerConfig`] - Cross-encoder reranking
-//! - [`VectorRescorer`] - Full-precision rescoring
+//! ## Quick start
 //!
-//! ## Vector Database
-//! - [`BqClient`], [`BqConfig`] - Binary quantized Qdrant client
-//! - [`QdrantClient`] - Direct Qdrant access
+//! ```rust,no_run
+//! use reflex::Config;
 //!
-//! ## Utilities
-//! - [`TauqEncoder`], [`TauqDecoder`] - Response encoding
-//! - [`DimConfig`], [`validate_embedding_dim`] - Dimension validation
-//! - Hashing functions for cache keys and tenant IDs
+//! # async fn run() -> anyhow::Result<()> {
+//! let config = Config::from_env()?;
+//! println!("Listening on {}", config.socket_addr());
+//! # Ok(())
+//! # }
+//! ```
 //!
-//! ## Constants
-//! Many dimension and configuration constants are exported for consistency
-//! across modules. Prefer using [`DimConfig`] for runtime configuration.
+//! ## Feature flags
 //!
-//! ## Test/Mock Support
-//! Mock implementations are available behind `#[cfg(any(test, feature = "mock"))]`.
+//! | Feature | Purpose |
+//! |---------|---------|
+//! | `cpu` | CPU-only inference (docs.rs default) |
+//! | `metal` | Apple Silicon GPU acceleration |
+//! | `cuda` | NVIDIA GPU acceleration |
+//! | `mock` | Mock backends for tests/examples |
+//!
+//! ## Modules
+//!
+//! - [`cache`] - Tiered cache (L1 exact + L2 semantic)
+//! - [`config`] - Environment-backed configuration
+//! - [`embedding`] - Embedding + reranker models
+//! - [`scoring`] - L3 verification (cross-encoder)
+//! - [`storage`] - Persistent cache entry storage
+//! - [`vectordb`] - Qdrant + binary quantization utilities
+//!
+//! Links: repo/issues at the crate `repository` URL.
+
+#![warn(missing_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod cache;
 pub mod config;

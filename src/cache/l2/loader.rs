@@ -1,7 +1,9 @@
 use crate::storage::mmap::{AlignedMmapBuilder, MmapFileHandle};
 use crate::storage::{CacheEntry, StorageError, StorageWriter};
 
+/// Loads cached entries (typically from disk) given a storage key.
 pub trait StorageLoader: Send + Sync {
+    /// Loads a cache entry for `tenant_id`, returning `None` on missing/mismatch.
     fn load(
         &self,
         storage_key: &str,
@@ -11,16 +13,19 @@ pub trait StorageLoader: Send + Sync {
 
 #[cfg(any(test, feature = "mock"))]
 #[derive(Default, Clone)]
+/// In-memory [`StorageLoader`] used by tests and examples.
 pub struct MockStorageLoader {
     entries: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, CacheEntry>>>,
 }
 
 #[cfg(any(test, feature = "mock"))]
 impl MockStorageLoader {
+    /// Creates an empty mock loader.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Inserts an entry under `key`.
     pub fn insert(&self, key: &str, entry: CacheEntry) {
         self.entries
             .write()
@@ -28,10 +33,12 @@ impl MockStorageLoader {
             .insert(key.to_string(), entry);
     }
 
+    /// Returns the number of stored entries.
     pub fn len(&self) -> usize {
         self.entries.read().expect("lock poisoned").len()
     }
 
+    /// Returns `true` if empty.
     pub fn is_empty(&self) -> bool {
         self.entries.read().expect("lock poisoned").is_empty()
     }
@@ -79,15 +86,18 @@ impl StorageWriter for MockStorageLoader {
 }
 
 #[derive(Debug, Clone)]
+/// NVMe-backed storage loader that reads `rkyv`-serialized entries via mmap.
 pub struct NvmeStorageLoader {
     storage_path: std::path::PathBuf,
 }
 
 impl NvmeStorageLoader {
+    /// Creates a loader rooted at `storage_path`.
     pub fn new(storage_path: std::path::PathBuf) -> Self {
         Self { storage_path }
     }
 
+    /// Returns the root storage path.
     pub fn storage_path(&self) -> &std::path::Path {
         &self.storage_path
     }

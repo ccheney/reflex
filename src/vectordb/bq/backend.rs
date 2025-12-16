@@ -8,13 +8,17 @@ use super::config::BqConfig;
 use super::mock::MockBqClient;
 
 #[derive(Clone)]
+/// Binary-quantized backend wrapper (real or mock).
 pub enum BqBackend {
+    /// Real Qdrant-backed client.
     Real(BqClient),
     #[cfg(any(test, feature = "mock"))]
+    /// In-memory mock backend.
     Mock(MockBqClient),
 }
 
 impl BqBackend {
+    /// Builds a backend from a URL and config (`mock:` URLs require `mock` feature).
     pub async fn from_config(url: &str, config: BqConfig) -> Result<Self, VectorDbError> {
         if url.starts_with("mock:") {
             #[cfg(any(test, feature = "mock"))]

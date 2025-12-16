@@ -1,3 +1,8 @@
+//! Sinter embedder (GGUF + tokenizer).
+//!
+//! Use [`SinterConfig::stub`] for tests/examples without model files.
+
+/// Sinter configuration.
 pub mod config;
 pub(crate) mod model;
 
@@ -30,6 +35,7 @@ enum EmbedderBackend {
     },
 }
 
+/// Embedding generator for semantic search (supports stub mode).
 pub struct SinterEmbedder {
     backend: EmbedderBackend,
     config: SinterConfig,
@@ -52,6 +58,7 @@ impl std::fmt::Debug for SinterEmbedder {
 }
 
 impl SinterEmbedder {
+    /// Loads the embedder from a config (stub mode is supported).
     pub fn load(config: SinterConfig) -> Result<Self, EmbeddingError> {
         config.validate()?;
 
@@ -139,6 +146,7 @@ impl SinterEmbedder {
         Ok((model, tokenizer))
     }
 
+    /// Generates an embedding for a single string.
     pub fn embed(&self, text: &str) -> Result<Vec<f16>, EmbeddingError> {
         match &self.backend {
             EmbedderBackend::Model {
@@ -150,6 +158,7 @@ impl SinterEmbedder {
         }
     }
 
+    /// Generates embeddings for a batch of strings.
     pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f16>>, EmbeddingError> {
         if texts.is_empty() {
             return Ok(vec![]);
@@ -281,18 +290,22 @@ impl SinterEmbedder {
         embedding.into_iter().map(f16::from_f32).collect()
     }
 
+    /// Returns the configured output embedding dimension.
     pub fn embedding_dim(&self) -> usize {
         self.config.embedding_dim
     }
 
+    /// Returns `true` if running in stub mode.
     pub fn is_stub(&self) -> bool {
         matches!(self.backend, EmbedderBackend::Stub { .. })
     }
 
+    /// Returns `true` if a model is loaded.
     pub fn has_model(&self) -> bool {
         matches!(self.backend, EmbedderBackend::Model { .. })
     }
 
+    /// Returns the embedder configuration.
     pub fn config(&self) -> &SinterConfig {
         &self.config
     }

@@ -12,6 +12,7 @@ use super::config::{
 use super::error::{LifecycleError, LifecycleResult};
 use super::types::{DehydrationResult, HydrationResult};
 
+/// Manages hydrate/dehydrate and an idle "reaper" that can stop the instance.
 pub struct LifecycleManager {
     config: LifecycleConfig,
     last_activity: Arc<RwLock<Instant>>,
@@ -21,6 +22,7 @@ pub struct LifecycleManager {
 }
 
 impl LifecycleManager {
+    /// Creates a manager using the configured cloud provider implementation.
     pub fn new(config: LifecycleConfig) -> Self {
         let ops: Arc<dyn CloudOps> = match config.cloud_provider {
             CloudProviderType::Gcp => Arc::new(GcpCloudOps::new()),
@@ -35,6 +37,7 @@ impl LifecycleManager {
         }
     }
 
+    /// Creates a manager with an explicit [`CloudOps`] implementation.
     pub fn new_with_ops(config: LifecycleConfig, ops: Arc<dyn CloudOps>) -> Self {
         Self {
             config,
@@ -45,28 +48,39 @@ impl LifecycleManager {
         }
     }
 
+    /// Creates a manager from environment configuration.
     pub fn from_env() -> LifecycleResult<Self> {
         Ok(Self::new(LifecycleConfig::from_env()?))
     }
 
+    /// Returns the active config.
     pub fn config(&self) -> &LifecycleConfig {
         &self.config
     }
+
+    /// Records activity (resets the idle timer).
     pub async fn record_activity(&self) {
         *self.last_activity.write().await = Instant::now();
     }
+
+    /// Returns the time since last activity.
     pub async fn idle_duration(&self) -> Duration {
         self.last_activity.read().await.elapsed()
     }
+
+    /// Returns `true` if `idle_timeout` is exceeded.
     pub async fn is_idle_timeout_exceeded(&self) -> bool {
         self.idle_duration().await >= self.config.idle_timeout
     }
+
+    /// Returns `true` if shutdown has been initiated.
     pub fn is_shutdown_initiated(&self) -> bool {
         // Acquire: ensures we see all writes that happened before the Release store
         // that set this flag to true (e.g., the dehydration in shutdown())
         self.shutdown_initiated.load(Ordering::Acquire)
     }
 
+    /// Downloads a snapshot from cloud storage (if configured).
     pub async fn hydrate(&self) -> LifecycleResult<HydrationResult> {
         if !self.config.has_gcs_bucket() {
             return Ok(HydrationResult::Skipped {
@@ -96,6 +110,7 @@ impl LifecycleManager {
         }
     }
 
+    /// Uploads the local snapshot to cloud storage (if configured and present).
     pub async fn dehydrate(&self) -> LifecycleResult<DehydrationResult> {
         if !self.config.has_gcs_bucket() {
             return Ok(DehydrationResult::Skipped {
@@ -116,6 +131,7 @@ impl LifecycleManager {
         Ok(DehydrationResult::Success { bytes })
     }
 
+    /// Starts the idle reaper background task (no-op if already running).
     pub fn start_reaper_thread(&self) -> tokio::task::JoinHandle<()> {
         // AcqRel: swap needs both load and store semantics to ensure only one
         // reaper thread starts. Acquire sees prior stores, Release publishes our store.
@@ -166,6 +182,7 @@ impl LifecycleManager {
         })
     }
 
+    /// Initiates shutdown (idempotent) and runs dehydration once.
     pub async fn shutdown(&self) -> LifecycleResult<()> {
         // AcqRel: swap needs both semantics - Acquire to see if already shut down,
         // Release to publish shutdown state so other threads (reaper, callers) see it
@@ -177,14 +194,18 @@ impl LifecycleManager {
 }
 
 #[derive(Clone)]
+/// Convenience wrapper to record activity without exposing the full manager.
 pub struct ActivityRecorder {
     manager: Arc<LifecycleManager>,
 }
 
 impl ActivityRecorder {
+    /// Creates a new recorder for a manager.
     pub fn new(manager: Arc<LifecycleManager>) -> Self {
         Self { manager }
     }
+
+    /// Records activity.
     pub async fn record(&self) {
         self.manager.record_activity().await;
     }

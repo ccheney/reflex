@@ -1,8 +1,15 @@
+//! Binary quantization helpers and Qdrant BQ client.
+
+/// Backend wrapper (real or mock).
 pub mod backend;
+/// BQ-optimized Qdrant client.
 pub mod client;
+/// BQ configuration and constants.
 pub mod config;
 #[cfg(any(test, feature = "mock"))]
+/// In-memory mock BQ client (enabled with `mock` feature).
 pub mod mock;
+/// Quantization utilities.
 pub mod utils;
 
 #[cfg(test)]

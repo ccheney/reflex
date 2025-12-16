@@ -1,4 +1,8 @@
+//! Cross-encoder reranker used for L3 verification.
+
+/// Reranker configuration.
 pub mod config;
+/// Reranker error types.
 pub mod error;
 
 #[cfg(test)]
@@ -15,6 +19,7 @@ use tracing::{debug, info};
 use crate::embedding::device::select_device;
 use crate::embedding::utils::load_tokenizer_with_truncation;
 
+/// Cross-encoder model used to rerank candidates (stub mode supported).
 pub struct Reranker {
     device: candle_core::Device,
     config: RerankerConfig,
@@ -34,6 +39,7 @@ impl std::fmt::Debug for Reranker {
 }
 
 impl Reranker {
+    /// Loads a reranker from config (or creates a stub if no model is configured).
     pub fn load(config: RerankerConfig) -> Result<Self, RerankerError> {
         if let Err(msg) = config.validate() {
             return Err(RerankerError::InvalidConfig { reason: msg });
@@ -100,6 +106,7 @@ impl Reranker {
         }
     }
 
+    /// Creates a stub reranker.
     pub fn stub() -> Result<Self, RerankerError> {
         Self::load(RerankerConfig::stub())
     }
@@ -114,6 +121,7 @@ impl Reranker {
         }
     }
 
+    /// Scores a single query/candidate pair.
     pub fn score(&self, query: &str, candidate: &str) -> Result<f32, RerankerError> {
         debug!(
             query_len = query.len(),
@@ -170,6 +178,7 @@ impl Reranker {
         Ok(score)
     }
 
+    /// Scores and sorts candidates best-first.
     pub fn rerank(
         &self,
         query: &str,
@@ -200,6 +209,7 @@ impl Reranker {
         Ok(scored)
     }
 
+    /// Reranks and filters to scores above the configured threshold.
     pub fn rerank_with_threshold(
         &self,
         query: &str,
@@ -223,22 +233,27 @@ impl Reranker {
         Ok(filtered)
     }
 
+    /// Returns `true` if a model was loaded (vs stub mode).
     pub fn is_model_loaded(&self) -> bool {
         self.model_loaded
     }
 
+    /// Returns the configured verification threshold.
     pub fn threshold(&self) -> f32 {
         self.config.threshold
     }
 
+    /// Returns the active configuration.
     pub fn config(&self) -> &RerankerConfig {
         &self.config
     }
 
+    /// Returns the compute device.
     pub fn device(&self) -> &candle_core::Device {
         &self.device
     }
 
+    /// Returns `true` if `score` exceeds the configured threshold.
     pub fn is_hit(&self, score: f32) -> bool {
         score > self.config.threshold
     }

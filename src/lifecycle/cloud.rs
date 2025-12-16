@@ -1,57 +1,6 @@
-//! Cloud storage operations for state persistence.
+//! Cloud storage operations used by lifecycle management.
 //!
-//! This module provides abstractions for interacting with cloud storage backends,
-//! primarily Google Cloud Storage (GCS), to support state persistence workflows
-//! such as downloading initial state and uploading checkpoints.
-//!
-//! # Runtime Dependencies
-//!
-//! The [`GcpCloudOps`] implementation relies on external CLI tools being available
-//! in the runtime environment:
-//!
-//! - **`gsutil`**: Used for file upload/download operations to GCS buckets
-//! - **`gcloud`**: Used for instance management operations (e.g., self-stop)
-//!
-//! These binaries must be installed and present in the system `PATH`. If they are
-//! missing, operations will fail with a descriptive error message.
-//!
-//! # Authentication
-//!
-//! This module relies on the environment's default credentials for authentication.
-//! Supported credential sources include:
-//!
-//! - **Application Default Credentials (ADC)**: Set via `GOOGLE_APPLICATION_CREDENTIALS`
-//! - **Service Account**: When running on GCE/GKE with an attached service account
-//! - **User Credentials**: From `gcloud auth login` or `gcloud auth application-default login`
-//!
-//! No explicit credential configuration is performed by this module; it defers
-//! entirely to the underlying CLI tools' credential resolution.
-//!
-//! # Error Handling
-//!
-//! Errors from missing binaries, authentication failures, or cloud API errors are
-//! returned as [`LifecycleError::CloudError`] containing descriptive string messages.
-//! This approach is acceptable for this use case where errors are logged and may
-//! trigger retries or graceful degradation at higher layers.
-//!
-//! # Containerized Deployments
-//!
-//! For containerized deployments, ensure the base image includes the required tools:
-//!
-//! ```dockerfile
-//! # Example: Using Google Cloud SDK base image
-//! FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
-//!
-//! # Or install in your own image
-//! RUN apt-get update && apt-get install -y google-cloud-sdk
-//! ```
-//!
-//! # Local Development
-//!
-//! For local development and testing, [`LocalCloudOps`] provides a filesystem-based
-//! mock implementation that stores "cloud" objects in a temporary directory
-//! (`$TMPDIR/reflex_cloud_mock/`). This allows testing state persistence workflows
-//! without requiring actual cloud credentials or network access.
+//! `GcpCloudOps` shells out to `gsutil`/`gcloud`. `LocalCloudOps` is a filesystem mock.
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -69,17 +18,22 @@ const CMD_RETRIES: usize = 3;
 const CMD_RETRY_BACKOFF: Duration = Duration::from_millis(750);
 
 #[async_trait]
+/// Cloud operations required for hydration/dehydration and self-stop.
 pub trait CloudOps: Send + Sync {
+    /// Downloads `object` from `container` to `dest`.
     async fn download_file(
         &self,
         container: &str,
         object: &str,
         dest: &Path,
     ) -> LifecycleResult<()>;
+    /// Uploads `src` to `container/object`.
     async fn upload_file(&self, container: &str, object: &str, src: &Path) -> LifecycleResult<()>;
+    /// Attempts to stop the current instance.
     async fn stop_self(&self) -> LifecycleResult<()>;
 }
 
+/// Google Cloud Storage / Compute Engine implementation.
 pub struct GcpCloudOps {
     gsutil_path: PathBuf,
     gcloud_path: PathBuf,
@@ -87,6 +41,7 @@ pub struct GcpCloudOps {
 }
 
 impl GcpCloudOps {
+    /// Creates a new GCP implementation using `gsutil` and `gcloud` from `PATH`.
     pub fn new() -> Self {
         Self {
             gsutil_path: PathBuf::from("gsutil"),
@@ -232,9 +187,11 @@ impl CloudOps for GcpCloudOps {
     }
 }
 
+/// Local filesystem mock implementation of [`CloudOps`].
 pub struct LocalCloudOps;
 
 impl LocalCloudOps {
+    /// Creates a new local implementation.
     pub fn new() -> Self {
         Self
     }

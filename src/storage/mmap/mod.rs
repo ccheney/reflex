@@ -1,4 +1,11 @@
+//! Memory-mapped file helpers.
+//!
+//! These utilities are used to read/write `rkyv`-serialized payloads efficiently and share
+//! them across cache layers without copying.
+
+/// Mmap configuration types.
 pub mod config;
+/// Mmap error types.
 pub mod error;
 
 #[cfg(test)]
@@ -19,6 +26,7 @@ use rkyv::api::high::{HighValidator, access};
 use rkyv::bytecheck::CheckBytes;
 use rkyv::rancor::Error as RkyvError;
 
+/// Required alignment (bytes) for validated `rkyv` access.
 pub const RKYV_ALIGNMENT: usize = 16;
 
 enum MmapInner {
@@ -67,6 +75,7 @@ impl MmapInner {
     }
 }
 
+/// A file-backed memory map (read-only, read-write, or copy-on-write).
 pub struct MmapFile {
     mmap: MmapInner,
     file: File,
@@ -75,6 +84,7 @@ pub struct MmapFile {
 }
 
 impl MmapFile {
+    /// Opens an existing file with the provided configuration.
     pub fn open<P: AsRef<Path>>(path: P, config: MmapConfig) -> MmapResult<Self> {
         let path = path.as_ref();
 
@@ -102,6 +112,7 @@ impl MmapFile {
         })
     }
 
+    /// Creates (or truncates) a file to `size` and opens a read-write mapping.
     pub fn create<P: AsRef<Path>>(
         path: P,
         size: usize,
@@ -167,22 +178,27 @@ impl MmapFile {
         Ok(mmap)
     }
 
+    /// Returns a read-only view of the mapped bytes.
     pub fn as_slice(&self) -> &[u8] {
         self.mmap.as_slice()
     }
 
+    /// Returns a mutable view of the bytes (if the mapping is writable).
     pub fn as_mut_slice(&mut self) -> Option<&mut [u8]> {
         self.mmap.as_mut_slice()
     }
 
+    /// Returns the mapped byte length.
     pub fn len(&self) -> usize {
         self.mmap.len()
     }
 
+    /// Returns `true` if the mapping length is zero.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns `true` if the mapping mode allows writes.
     pub fn is_writable(&self) -> bool {
         matches!(
             self.config.mode,
@@ -190,21 +206,25 @@ impl MmapFile {
         )
     }
 
+    /// Flushes any dirty pages (no-op for read-only maps).
     pub fn flush(&self) -> MmapResult<()> {
         self.mmap.flush()?;
         Ok(())
     }
 
+    /// Flushes any dirty pages asynchronously (no-op for read-only maps).
     pub fn flush_async(&self) -> MmapResult<()> {
         self.mmap.flush_async()?;
         Ok(())
     }
 
+    /// Flushes a byte range (no-op for read-only maps).
     pub fn flush_range(&self, offset: usize, len: usize) -> MmapResult<()> {
         self.mmap.flush_range(offset, len)?;
         Ok(())
     }
 
+    /// Validates and returns an archived `rkyv` value from offset 0.
     pub fn access_archived<T>(&self) -> MmapResult<&T>
     where
         T: Portable + for<'a> CheckBytes<HighValidator<'a, RkyvError>>,
@@ -212,6 +232,7 @@ impl MmapFile {
         self.access_archived_at::<T>(0)
     }
 
+    /// Validates and returns an archived `rkyv` value starting at `offset`.
     pub fn access_archived_at<T>(&self, offset: usize) -> MmapResult<&T>
     where
         T: Portable + for<'a> CheckBytes<HighValidator<'a, RkyvError>>,
@@ -238,14 +259,17 @@ impl MmapFile {
         access::<T, RkyvError>(slice).map_err(|e| MmapError::ValidationFailed(format!("{:?}", e)))
     }
 
+    /// Returns a raw pointer to the mapped bytes.
     pub fn as_ptr(&self) -> *const u8 {
         self.as_slice().as_ptr()
     }
 
+    /// Returns a raw mutable pointer (if writable).
     pub fn as_mut_ptr(&mut self) -> Option<*mut u8> {
         self.as_mut_slice().map(|s| s.as_mut_ptr())
     }
 
+    /// Grows the underlying file and remaps.
     pub fn grow(&mut self, new_size: usize) -> MmapResult<()> {
         if self.config.mode == MmapMode::ReadOnly {
             return Err(MmapError::ResizeFailed(
@@ -270,6 +294,7 @@ impl MmapFile {
         Ok(())
     }
 
+    /// Shrinks the underlying file and remaps.
     pub fn shrink(&mut self, new_size: usize) -> MmapResult<()> {
         if self.config.mode == MmapMode::ReadOnly {
             return Err(MmapError::ResizeFailed(
@@ -300,6 +325,7 @@ impl MmapFile {
         Ok(())
     }
 
+    /// Resizes the underlying file (grow/shrink) and remaps.
     pub fn resize(&mut self, new_size: usize) -> MmapResult<()> {
         let current_size = self.len();
 
@@ -312,16 +338,19 @@ impl MmapFile {
         }
     }
 
+    /// Returns the file path.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Returns the mapping mode.
     pub fn mode(&self) -> MmapMode {
         self.config.mode
     }
 }
 
 #[derive(Clone)]
+/// Shared read-only mmap handle (cheap to clone).
 pub struct MmapFileHandle {
     inner: Arc<Mmap>,
     path: Arc<std::path::PathBuf>,
@@ -338,6 +367,7 @@ impl std::fmt::Debug for MmapFileHandle {
 }
 
 impl MmapFileHandle {
+    /// Opens a read-only mapping to an existing file.
     pub fn open<P: AsRef<Path>>(path: P) -> MmapResult<Self> {
         let path = path.as_ref();
         let file = File::open(path)?;
@@ -357,22 +387,27 @@ impl MmapFileHandle {
         })
     }
 
+    /// Returns a view of the mapped bytes.
     pub fn as_slice(&self) -> &[u8] {
         self.inner.deref()
     }
 
+    /// Returns the mapped byte length.
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
+    /// Returns `true` if the mapping length is zero.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Returns the number of strong references to the underlying mmap.
     pub fn strong_count(&self) -> usize {
         Arc::strong_count(&self.inner)
     }
 
+    /// Validates and returns an archived `rkyv` value from offset 0.
     pub fn access_archived<T>(&self) -> MmapResult<&T>
     where
         T: Portable + for<'a> CheckBytes<HighValidator<'a, RkyvError>>,
@@ -380,6 +415,7 @@ impl MmapFileHandle {
         self.access_archived_at::<T>(0)
     }
 
+    /// Validates and returns an archived `rkyv` value starting at `offset`.
     pub fn access_archived_at<T>(&self, offset: usize) -> MmapResult<&T>
     where
         T: Portable + for<'a> CheckBytes<HighValidator<'a, RkyvError>>,
@@ -406,26 +442,31 @@ impl MmapFileHandle {
         access::<T, RkyvError>(slice).map_err(|e| MmapError::ValidationFailed(format!("{:?}", e)))
     }
 
+    /// Returns a raw pointer to the mapped bytes.
     pub fn as_ptr(&self) -> *const u8 {
         self.as_slice().as_ptr()
     }
 
+    /// Returns the file path.
     pub fn path(&self) -> &Path {
         &self.path
     }
 }
 
+/// Helper to write bytes to a file then open an aligned mmap.
 pub struct AlignedMmapBuilder {
     path: std::path::PathBuf,
 }
 
 impl AlignedMmapBuilder {
+    /// Creates a builder for `path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),
         }
     }
 
+    /// Writes bytes and opens a read-write mapping.
     pub fn write(self, data: &[u8]) -> MmapResult<MmapFile> {
         let mut file = OpenOptions::new()
             .read(true)
@@ -441,6 +482,7 @@ impl AlignedMmapBuilder {
         MmapFile::open(&self.path, MmapConfig::read_write())
     }
 
+    /// Writes bytes and opens a read-only handle.
     pub fn write_readonly(self, data: &[u8]) -> MmapResult<MmapFileHandle> {
         let mut file = OpenOptions::new()
             .read(true)

@@ -9,6 +9,7 @@ use tracing::debug;
 
 use super::error::EmbeddingError;
 
+/// Selects the compute device based on enabled features (falls back to CPU).
 pub fn select_device() -> Result<Device, EmbeddingError> {
     #[cfg(any(feature = "metal", feature = "cuda"))]
     let mut failures: Vec<String> = Vec::new();

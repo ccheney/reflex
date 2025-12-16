@@ -11,7 +11,8 @@ categories = ["caching", "database"]
 rust-version = "1.92"
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["cpu", "mock"]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]

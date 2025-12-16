@@ -1,5 +1,10 @@
+//! Hash utilities for cache keys and identifiers.
+//!
+//! Uses BLAKE3. Prefer 32-byte hashes for exact keys and 64-bit hashes for compact ids.
+
 use blake3::Hasher;
 
+/// Hashes a prompt to a 32-byte BLAKE3 digest.
 #[inline]
 pub fn hash_prompt(prompt: &str) -> [u8; 32] {
     *blake3::hash(prompt.as_bytes()).as_bytes()
@@ -7,46 +12,7 @@ pub fn hash_prompt(prompt: &str) -> [u8; 32] {
 
 /// Computes a 64-bit hash of the input data using BLAKE3, truncated from 256 bits.
 ///
-/// # Truncation Rationale
-///
-/// This function takes the first 8 bytes (64 bits) of a BLAKE3 hash. This truncation
-/// is acceptable for the following use cases:
-///
-/// - **Cache keys**: Fast lookups in hash maps and tiered caches
-/// - **Identifiers**: Tenant IDs, context hashes, and content fingerprints
-/// - **Deduplication**: Detecting likely-duplicate entries before expensive operations
-///
-/// # Collision Probability
-///
-/// With 64 bits of entropy, the birthday paradox gives us the following collision probabilities:
-///
-/// | Number of Items | Collision Probability |
-/// |-----------------|----------------------|
-/// | 1 million       | ~0.00003% (negligible) |
-/// | 10 million      | ~0.003% (very low) |
-/// | 100 million     | ~0.3% (low) |
-/// | 1 billion       | ~3% (noticeable) |
-/// | ~4.3 billion    | ~50% (birthday bound) |
-///
-/// For practical cache sizes (millions of entries), the collision probability is negligible.
-/// The formula is approximately: `P(collision) ≈ n² / (2 × 2^64)` for `n` items.
-///
-/// # Collision Tolerance
-///
-/// The higher-level logic (tiered cache, content-addressed storage) is designed to tolerate
-/// rare collisions gracefully:
-///
-/// - **Cache lookups**: A collision results in a cache miss, not data corruption. The full
-///   content is verified downstream, so a false positive simply triggers a cache refresh.
-/// - **No security dependency**: This hash is not used for cryptographic verification or
-///   authentication—only for fast indexing and probabilistic deduplication.
-///
-/// # When to Use Full 256-bit Hashes
-///
-/// If stricter uniqueness guarantees are ever required (e.g., content-addressed storage
-/// where collisions would cause data loss), use [`hash_prompt`] or [`hash_cache_content`]
-/// which return the full 32-byte BLAKE3 output. The full hash provides ~128 bits of
-/// collision resistance, making collisions computationally infeasible.
+/// Use this for compact ids (tenant/context). Not suitable for security.
 #[inline]
 pub fn hash_to_u64(data: &[u8]) -> u64 {
     let hash = blake3::hash(data);
@@ -56,6 +22,7 @@ pub fn hash_to_u64(data: &[u8]) -> u64 {
     u64::from_le_bytes(bytes)
 }
 
+/// Hashes a `(role, plan)` pair into a compact 64-bit context hash.
 #[inline]
 pub fn hash_context(role: &str, plan: &str) -> u64 {
     let mut hasher = Hasher::new();
@@ -70,11 +37,13 @@ pub fn hash_context(role: &str, plan: &str) -> u64 {
     u64::from_le_bytes(bytes)
 }
 
+/// Hashes a tenant identifier string to a compact 64-bit id.
 #[inline]
 pub fn hash_tenant_id(tenant: &str) -> u64 {
     hash_to_u64(tenant.as_bytes())
 }
 
+/// Hashes cache content to a 32-byte digest (tenant + context + embedding + payload).
 #[inline]
 pub fn hash_cache_content(
     tenant_id: u64,

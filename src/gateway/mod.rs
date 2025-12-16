@@ -1,5 +1,11 @@
 //! HTTP gateway layer.
 
+//! HTTP gateway (Axum) for cache lookup and storage.
+//!
+//! This module is primarily used by the `reflex` server binary.
+
+#![allow(missing_docs)]
+
 pub mod adapter;
 pub mod error;
 pub mod handler;

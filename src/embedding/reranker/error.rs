@@ -4,27 +4,58 @@ use thiserror::Error;
 use crate::embedding::error::EmbeddingError;
 
 #[derive(Debug, Error)]
+/// Errors returned by reranker load/scoring.
 pub enum RerankerError {
+    /// Model files were not found.
     #[error("reranker model not found at path: {path}")]
-    ModelNotFound { path: PathBuf },
+    ModelNotFound {
+        /// Missing model path.
+        path: PathBuf,
+    },
 
+    /// Model load failed.
     #[error("failed to load reranker model: {reason}")]
-    ModelLoadFailed { reason: String },
+    ModelLoadFailed {
+        /// Error message.
+        reason: String,
+    },
 
+    /// Requested compute device is unavailable.
     #[error("{device} device unavailable: {reason}")]
-    DeviceUnavailable { device: String, reason: String },
+    DeviceUnavailable {
+        /// Device name (e.g. "cuda", "metal").
+        device: String,
+        /// Error message.
+        reason: String,
+    },
 
+    /// Inference failed.
     #[error("reranker inference failed: {reason}")]
-    InferenceFailed { reason: String },
+    InferenceFailed {
+        /// Error message.
+        reason: String,
+    },
 
+    /// Tokenization failed.
     #[error("tokenization failed: {reason}")]
-    TokenizationFailed { reason: String },
+    TokenizationFailed {
+        /// Error message.
+        reason: String,
+    },
 
+    /// Configuration is invalid.
     #[error("invalid reranker configuration: {reason}")]
-    InvalidConfig { reason: String },
+    InvalidConfig {
+        /// Error message.
+        reason: String,
+    },
 
+    /// Operation requires a model but none is configured/loaded.
     #[error("reranker not available: {reason}")]
-    NotAvailable { reason: String },
+    NotAvailable {
+        /// Error message.
+        reason: String,
+    },
 }
 
 impl From<candle_core::Error> for RerankerError {

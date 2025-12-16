@@ -5,16 +5,24 @@ use qdrant_client::qdrant::point_id::PointIdOptions;
 use super::VectorDbError;
 
 #[derive(Debug, Clone)]
+/// Point payload used for upserts.
 pub struct VectorPoint {
+    /// Point id.
     pub id: u64,
+    /// Vector values.
     pub vector: Vec<f32>,
+    /// Tenant identifier.
     pub tenant_id: u64,
+    /// Context hash.
     pub context_hash: u64,
+    /// Unix timestamp.
     pub timestamp: i64,
+    /// Optional storage key for loading the full entry.
     pub storage_key: Option<String>,
 }
 
 impl VectorPoint {
+    /// Creates a point with `timestamp=0` and no storage key.
     pub fn new(id: u64, vector: Vec<f32>, tenant_id: u64, context_hash: u64) -> Self {
         Self {
             id,
@@ -26,6 +34,7 @@ impl VectorPoint {
         }
     }
 
+    /// Builds a point from f16 embedding bytes.
     pub fn from_embedding_bytes(
         id: u64,
         embedding_bytes: &[u8],
@@ -36,11 +45,13 @@ impl VectorPoint {
         Ok(Self::new(id, vector, tenant_id, context_hash))
     }
 
+    /// Sets the timestamp.
     pub fn with_timestamp(mut self, timestamp: i64) -> Self {
         self.timestamp = timestamp;
         self
     }
 
+    /// Sets the storage key.
     pub fn with_storage_key(mut self, key: String) -> Self {
         self.storage_key = Some(key);
         self
@@ -48,16 +59,24 @@ impl VectorPoint {
 }
 
 #[derive(Debug, Clone)]
+/// Result returned by a vector search.
 pub struct SearchResult {
+    /// Point id.
     pub id: u64,
+    /// Similarity score (higher is better).
     pub score: f32,
+    /// Tenant identifier.
     pub tenant_id: u64,
+    /// Context hash.
     pub context_hash: u64,
+    /// Unix timestamp.
     pub timestamp: i64,
+    /// Optional storage key for loading the full entry.
     pub storage_key: Option<String>,
 }
 
 impl SearchResult {
+    /// Converts a Qdrant `ScoredPoint` into a typed result (returns `None` if unsupported id).
     pub fn from_scored_point(point: ScoredPoint) -> Option<Self> {
         let id = match point.id.and_then(|pid| pid.point_id_options) {
             Some(PointIdOptions::Num(n)) => n,

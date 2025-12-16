@@ -7,29 +7,35 @@ use super::config::BqConfig;
 use crate::vectordb::{QdrantClient, SearchResult, VectorDbError, VectorPoint, WriteConsistency};
 
 #[derive(Clone)]
+/// Qdrant client configured for binary-quantized search.
 pub struct BqClient {
     inner: QdrantClient,
     config: BqConfig,
 }
 
 impl BqClient {
+    /// Creates a client for `url` with default config.
     pub async fn new(url: &str) -> Result<Self, VectorDbError> {
         Self::with_config(url, BqConfig::default()).await
     }
 
+    /// Creates a client for `url` with a specific config.
     pub async fn with_config(url: &str, config: BqConfig) -> Result<Self, VectorDbError> {
         let inner = QdrantClient::new(url).await?;
         Ok(Self { inner, config })
     }
 
+    /// Returns the configured URL.
     pub fn url(&self) -> &str {
         self.inner.url()
     }
 
+    /// Returns the active config.
     pub fn config(&self) -> &BqConfig {
         &self.config
     }
 
+    /// Creates a binary-quantized collection.
     pub async fn create_bq_collection(
         &self,
         name: &str,
@@ -55,6 +61,7 @@ impl BqClient {
         Ok(())
     }
 
+    /// Ensures a binary-quantized collection exists (creates it if missing).
     pub async fn ensure_bq_collection(
         &self,
         name: &str,
@@ -69,14 +76,17 @@ impl BqClient {
         Ok(())
     }
 
+    /// Returns `true` if the collection exists.
     pub async fn collection_exists(&self, name: &str) -> Result<bool, VectorDbError> {
         self.inner.collection_exists(name).await
     }
 
+    /// Performs a basic health check request.
     pub async fn health_check(&self) -> Result<(), VectorDbError> {
         self.inner.health_check().await
     }
 
+    /// Searches the binary-quantized index.
     pub async fn search_bq(
         &self,
         collection: &str,
@@ -122,6 +132,7 @@ impl BqClient {
         Ok(results)
     }
 
+    /// Upserts points into a collection.
     pub async fn upsert_points(
         &self,
         collection: &str,
@@ -133,6 +144,7 @@ impl BqClient {
             .await
     }
 
+    /// Deletes points by id.
     pub async fn delete_points(
         &self,
         collection: &str,

@@ -1,13 +1,33 @@
 #[derive(Debug, Clone)]
+/// Result of a hydration attempt.
 pub enum HydrationResult {
-    Success { bytes: u64 },
+    /// Download succeeded.
+    Success {
+        /// Downloaded size in bytes.
+        bytes: u64,
+    },
+    /// Snapshot was not found.
     NotFound,
-    Skipped { reason: String },
+    /// Skipped (disabled or not configured).
+    Skipped {
+        /// Reason for skipping.
+        reason: String,
+    },
 }
 
 #[derive(Debug, Clone)]
+/// Result of a dehydration attempt.
 pub enum DehydrationResult {
-    Success { bytes: u64 },
+    /// Upload succeeded.
+    Success {
+        /// Uploaded size in bytes.
+        bytes: u64,
+    },
+    /// No local snapshot to upload.
     NoSnapshot,
-    Skipped { reason: String },
+    /// Skipped (disabled or not configured).
+    Skipped {
+        /// Reason for skipping.
+        reason: String,
+    },
 }

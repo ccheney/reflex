@@ -3,15 +3,19 @@ use crate::vectordb::bq::BqClient;
 use crate::vectordb::bq::MockBqClient;
 use crate::vectordb::{SearchResult, VectorDbError, VectorPoint, WriteConsistency};
 
+/// Backend required by the L2 cache for vector search + upsert.
 pub trait BqSearchBackend: Send + Sync {
+    /// Returns `true` if the backend is ready for requests.
     fn is_ready(&self) -> impl std::future::Future<Output = bool> + Send;
 
+    /// Creates the collection if it doesn't exist.
     fn ensure_collection(
         &self,
         name: &str,
         vector_size: u64,
     ) -> impl std::future::Future<Output = Result<(), VectorDbError>> + Send;
 
+    /// Performs a search against the binary-quantized index.
     fn search_bq(
         &self,
         collection: &str,
@@ -20,6 +24,7 @@ pub trait BqSearchBackend: Send + Sync {
         tenant_filter: Option<u64>,
     ) -> impl std::future::Future<Output = Result<Vec<SearchResult>, VectorDbError>> + Send;
 
+    /// Upserts points into the collection.
     fn upsert_points(
         &self,
         collection: &str,

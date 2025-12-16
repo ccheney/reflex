@@ -1,10 +1,22 @@
+//! L2 semantic cache (embedding + vector search + rescoring).
+//!
+//! The default implementation embeds with [`SinterEmbedder`](crate::embedding::sinter::SinterEmbedder),
+//! searches a binary-quantized backend, then rescoring top candidates in full precision.
+
+/// Backend trait used by L2 for vector search/upsert.
 pub mod backend;
+/// Core L2 cache implementation.
 pub mod cache;
+/// L2 configuration.
 pub mod config;
+/// L2 error types.
 pub mod error;
+/// Storage loader traits and implementations.
 pub mod loader;
 #[cfg(any(test, feature = "mock"))]
+/// Mock L2 cache helpers (enabled with `mock` feature).
 pub mod mock;
+/// L2 result types.
 pub mod types;
 
 #[cfg(test)]

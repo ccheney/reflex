@@ -2,6 +2,7 @@ use crate::vectordb::{SearchResult, VectorDbClient, VectorDbError, VectorPoint, 
 use std::collections::HashMap;
 
 #[derive(Default)]
+/// In-memory mock implementation of [`VectorDbClient`].
 pub struct MockVectorDbClient {
     collections: std::sync::RwLock<HashMap<String, MockCollection>>,
 }
@@ -22,10 +23,12 @@ struct MockStoredPoint {
 }
 
 impl MockVectorDbClient {
+    /// Creates an empty mock client.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns the number of points currently stored in `collection`.
     pub fn point_count(&self, collection: &str) -> Option<usize> {
         self.collections
             .read()
@@ -52,6 +55,8 @@ impl MockVectorDbClient {
         let _ = handle.join();
     }
 }
+
+/// Computes cosine similarity between two f32 vectors.
 
 impl VectorDbClient for MockVectorDbClient {
     async fn ensure_collection(&self, name: &str, vector_size: u64) -> Result<(), VectorDbError> {
@@ -190,6 +195,7 @@ impl VectorDbClient for MockVectorDbClient {
     }
 }
 
+/// Computes cosine similarity between two f32 vectors.
 pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;

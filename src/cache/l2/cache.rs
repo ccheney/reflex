@@ -14,6 +14,7 @@ use super::error::{L2CacheError, L2CacheResult};
 use super::loader::StorageLoader;
 use super::types::L2LookupResult;
 
+/// L2 semantic cache: embed → BQ search → load entries → rescore.
 pub struct L2SemanticCache<B: BqSearchBackend, S: StorageLoader> {
     embedder: SinterEmbedder,
     bq_backend: B,
@@ -33,6 +34,7 @@ impl<B: BqSearchBackend, S: StorageLoader> std::fmt::Debug for L2SemanticCache<B
 }
 
 impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCache<B, S> {
+    /// Creates a new L2 cache.
     pub fn new(
         embedder: SinterEmbedder,
         bq_backend: B,
@@ -55,26 +57,32 @@ impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCache<B, S> {
         })
     }
 
+    /// Returns the active configuration.
     pub fn config(&self) -> &L2Config {
         &self.config
     }
 
+    /// Returns the embedder.
     pub fn embedder(&self) -> &SinterEmbedder {
         &self.embedder
     }
 
+    /// Returns `true` if the embedder is in stub mode.
     pub fn is_embedder_stub(&self) -> bool {
         self.embedder.is_stub()
     }
 
+    /// Returns the storage loader.
     pub fn storage(&self) -> &S {
         &self.storage
     }
 
+    /// Returns the BQ backend.
     pub fn bq_backend(&self) -> &B {
         &self.bq_backend
     }
 
+    /// Searches for semantic matches for `prompt` within `tenant_id`.
     #[instrument(skip(self, prompt), fields(tenant_id = tenant_id, prompt_len = prompt.len()))]
     pub async fn search(&self, prompt: &str, tenant_id: u64) -> L2CacheResult<L2LookupResult> {
         debug!("Generating embedding for prompt");
@@ -175,6 +183,7 @@ impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCache<B, S> {
         ))
     }
 
+    /// Indexes `prompt` with metadata and a storage key.
     #[instrument(skip(self, prompt, storage_key), fields(tenant_id = tenant_id, context_hash = context_hash))]
     pub async fn index(
         &self,
@@ -217,6 +226,7 @@ impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCache<B, S> {
         Ok(point_id)
     }
 
+    /// Ensures the configured collection exists.
     pub async fn ensure_collection(&self) -> L2CacheResult<()> {
         self.bq_backend
             .ensure_collection(&self.config.collection_name, self.config.vector_size)
@@ -224,27 +234,32 @@ impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCache<B, S> {
         Ok(())
     }
 
+    /// Returns `true` if the backend reports readiness.
     pub async fn is_ready(&self) -> bool {
         self.bq_backend.is_ready().await
     }
 }
 
 #[derive(Clone)]
+/// Shared handle to an [`L2SemanticCache`].
 pub struct L2SemanticCacheHandle<B: BqSearchBackend, S: StorageLoader> {
     inner: Arc<RwLock<L2SemanticCache<B, S>>>,
 }
 
 impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCacheHandle<B, S> {
+    /// Wraps an L2 cache in an `Arc<RwLock<...>>` for shared async access.
     pub fn new(cache: L2SemanticCache<B, S>) -> Self {
         Self {
             inner: Arc::new(RwLock::new(cache)),
         }
     }
 
+    /// Delegates to [`L2SemanticCache::search`].
     pub async fn search(&self, prompt: &str, tenant_id: u64) -> L2CacheResult<L2LookupResult> {
         self.inner.read().await.search(prompt, tenant_id).await
     }
 
+    /// Delegates to [`L2SemanticCache::index`].
     pub async fn index(
         &self,
         prompt: &str,
@@ -260,6 +275,7 @@ impl<B: BqSearchBackend, S: StorageLoader> L2SemanticCacheHandle<B, S> {
             .await
     }
 
+    /// Returns the number of strong references to the underlying handle.
     pub fn strong_count(&self) -> usize {
         Arc::strong_count(&self.inner)
     }

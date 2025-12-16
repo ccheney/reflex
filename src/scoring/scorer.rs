@@ -7,6 +7,7 @@ use crate::storage::CacheEntry;
 use super::error::ScoringError;
 use super::types::{VerificationResult, VerifiedCandidate};
 
+/// L3 verifier that reranks candidates with a cross-encoder.
 pub struct CrossEncoderScorer {
     reranker: Reranker,
 }
@@ -20,33 +21,40 @@ impl std::fmt::Debug for CrossEncoderScorer {
 }
 
 impl CrossEncoderScorer {
+    /// Creates a new scorer from a reranker config.
     pub fn new(config: RerankerConfig) -> Result<Self, ScoringError> {
         let reranker = Reranker::load(config)?;
         Ok(Self { reranker })
     }
 
+    /// Creates a scorer in stub mode (no model files required).
     pub fn stub() -> Result<Self, ScoringError> {
         Ok(Self {
             reranker: Reranker::stub()?,
         })
     }
 
+    /// Returns `true` if a reranker model is loaded.
     pub fn is_model_loaded(&self) -> bool {
         self.reranker.is_model_loaded()
     }
 
+    /// Returns the verification threshold.
     pub fn threshold(&self) -> f32 {
         self.reranker.threshold()
     }
 
+    /// Returns the underlying reranker.
     pub fn reranker(&self) -> &Reranker {
         &self.reranker
     }
 
+    /// Scores a query/candidate text pair.
     pub fn score(&self, query: &str, candidate_text: &str) -> Result<f32, ScoringError> {
         Ok(self.reranker.score(query, candidate_text)?)
     }
 
+    /// Verifies candidates and returns the winning entry (if verified) plus a result.
     pub fn verify_candidates(
         &self,
         query: &str,
@@ -105,6 +113,7 @@ impl CrossEncoderScorer {
         }
     }
 
+    /// Scores all candidates and returns the full list with scores.
     pub fn score_candidates(
         &self,
         query: &str,
@@ -125,6 +134,7 @@ impl CrossEncoderScorer {
             .collect()
     }
 
+    /// Verifies candidates and also returns scored details.
     pub fn verify_candidates_with_details(
         &self,
         query: &str,
@@ -154,6 +164,7 @@ impl CrossEncoderScorer {
         Ok((scored, result))
     }
 
+    /// Reranks and returns the top `top_n` scored candidates.
     pub fn rerank_top_n(
         &self,
         query: &str,

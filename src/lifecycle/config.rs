@@ -4,14 +4,20 @@ use std::time::Duration;
 
 use super::error::LifecycleResult;
 
+/// Default idle timeout before triggering dehydration/stop.
 pub const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 15 * 60;
+/// Default snapshot filename (object name).
 pub const DEFAULT_SNAPSHOT_FILENAME: &str = "snapshot.rkyv";
+/// Default reaper poll interval.
 pub const REAPER_CHECK_INTERVAL_SECS: u64 = 30;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Cloud provider selection for lifecycle operations.
 pub enum CloudProviderType {
     #[default]
+    /// Google Cloud Platform.
     Gcp,
+    /// Local filesystem mock.
     Local,
 }
 
@@ -28,12 +34,19 @@ impl std::str::FromStr for CloudProviderType {
 }
 
 #[derive(Debug, Clone)]
+/// Lifecycle configuration for hydration/dehydration and idle reaping.
 pub struct LifecycleConfig {
+    /// GCS bucket name (empty disables cloud ops).
     pub gcs_bucket: String,
+    /// Local path used for the snapshot file.
     pub local_snapshot_path: PathBuf,
+    /// Idle timeout before the reaper triggers dehydration/stop.
     pub idle_timeout: Duration,
+    /// If true, attempt to stop the instance after dehydration.
     pub enable_instance_stop: bool,
+    /// Cloud provider selection.
     pub cloud_provider: CloudProviderType,
+    /// Optional cloud region hint.
     pub cloud_region: Option<String>,
 }
 
@@ -59,6 +72,7 @@ impl LifecycleConfig {
     const ENV_CLOUD_PROVIDER: &'static str = "REFLEX_CLOUD_PROVIDER";
     const ENV_CLOUD_REGION: &'static str = "REFLEX_CLOUD_REGION";
 
+    /// Loads config from environment variables (with defaults).
     pub fn from_env() -> LifecycleResult<Self> {
         let defaults = Self::default();
         let gcs_bucket = env::var(Self::ENV_GCS_BUCKET).unwrap_or_default();
@@ -91,6 +105,7 @@ impl LifecycleConfig {
         })
     }
 
+    /// Returns `true` if a non-empty bucket is configured.
     pub fn has_gcs_bucket(&self) -> bool {
         !self.gcs_bucket.is_empty()
     }

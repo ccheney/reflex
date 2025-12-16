@@ -1,3 +1,5 @@
+//! Minimal BERT classifier wrapper used by the reranker.
+
 use candle::{DType, Device, Result, Tensor};
 use candle_core as candle;
 use candle_core::IndexOp;
@@ -41,9 +43,11 @@ impl BertForSequenceClassificationImpl {
 }
 
 #[derive(Clone)]
+/// BERT sequence-classification model that returns a single logit score.
 pub struct BertClassifier(std::sync::Arc<BertForSequenceClassificationImpl>);
 
 impl BertClassifier {
+    /// Loads a model from a directory containing `config.json` and `model.safetensors`.
     pub fn load<P: AsRef<Path>>(model_dir: P, device: &Device) -> Result<Self> {
         let model_dir = model_dir.as_ref();
         let config_path = model_dir.join("config.json");
@@ -61,6 +65,7 @@ impl BertClassifier {
         Ok(Self(std::sync::Arc::new(model)))
     }
 
+    /// Runs a forward pass and returns logits.
     pub fn forward(
         &self,
         input_ids: &Tensor,

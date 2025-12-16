@@ -1,13 +1,18 @@
 use std::path::PathBuf;
 
+/// Default verification threshold (cross-encoder score).
 pub const DEFAULT_THRESHOLD: f32 = crate::constants::DEFAULT_VERIFICATION_THRESHOLD;
 
+/// Maximum sequence length used for reranker tokenization.
 pub const MAX_SEQ_LEN: usize = 512;
 
 #[derive(Debug, Clone)]
+/// Configuration for [`Reranker`](super::Reranker).
 pub struct RerankerConfig {
+    /// Directory containing `config.json`, `model.safetensors`, and tokenizer files.
     pub model_path: Option<PathBuf>,
 
+    /// Minimum score to consider a candidate verified.
     pub threshold: f32,
 }
 
@@ -21,6 +26,7 @@ impl Default for RerankerConfig {
 }
 
 impl RerankerConfig {
+    /// Creates a config for a model directory.
     pub fn new<P: Into<PathBuf>>(model_path: P) -> Self {
         Self {
             model_path: Some(model_path.into()),
@@ -28,6 +34,7 @@ impl RerankerConfig {
         }
     }
 
+    /// Creates a config that runs without a model (stub scoring).
     pub fn stub() -> Self {
         Self {
             model_path: None,
@@ -35,6 +42,7 @@ impl RerankerConfig {
         }
     }
 
+    /// Sets the threshold.
     pub fn with_threshold(mut self, threshold: f32) -> Self {
         assert!(
             (0.0..=1.0).contains(&threshold),
@@ -44,6 +52,7 @@ impl RerankerConfig {
         self
     }
 
+    /// Validates basic invariants.
     pub fn validate(&self) -> Result<(), String> {
         if !(0.0..=1.0).contains(&self.threshold) {
             return Err(format!(
@@ -61,6 +70,7 @@ impl RerankerConfig {
         Ok(())
     }
 
+    /// Loads config from `REFLEX_RERANKER_PATH` and `REFLEX_RERANKER_THRESHOLD`.
     pub fn from_env() -> Self {
         let model_path = std::env::var("REFLEX_RERANKER_PATH")
             .ok()

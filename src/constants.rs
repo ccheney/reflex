@@ -11,15 +11,22 @@
 //! 2. Use [`validate_embedding_dim`] at module boundaries to catch mismatches early
 //! 3. The compile-time constants remain as defaults and for static size calculations
 
+/// Default embedding vector dimension.
 pub const DEFAULT_EMBEDDING_DIM: usize = 1536;
+/// Default embedding size in bytes when stored as f16.
 pub const EMBEDDING_F16_BYTES: usize = DEFAULT_EMBEDDING_DIM * 2;
+/// Default embedding size in bytes when stored as f32.
 pub const EMBEDDING_F32_BYTES: usize = DEFAULT_EMBEDDING_DIM * 4;
+/// Default embedding size in bytes when stored as binary quantization (1 bit/dim).
 pub const EMBEDDING_BQ_BYTES: usize = DEFAULT_EMBEDDING_DIM / 8;
 
+/// Default vector size exported as `u64` for Qdrant APIs.
 pub const DEFAULT_VECTOR_SIZE_U64: u64 = DEFAULT_EMBEDDING_DIM as u64;
 
+/// Default L3 verification threshold.
 pub const DEFAULT_VERIFICATION_THRESHOLD: f32 = 0.70;
 
+/// Default maximum sequence length for models that support truncation.
 pub const DEFAULT_MAX_SEQ_LEN: usize = 8192;
 
 /// Runtime dimension configuration for modules that support dynamic embedding sizes.
@@ -85,9 +92,17 @@ pub enum DimValidationError {
     /// Embedding dimension cannot be zero.
     ZeroDimension,
     /// Embedding dimension must be divisible by 8 for binary quantization.
-    NotDivisibleBy8 { dim: usize },
+    NotDivisibleBy8 {
+        /// Actual dimension.
+        dim: usize,
+    },
     /// Runtime dimension does not match expected dimension.
-    DimensionMismatch { expected: usize, actual: usize },
+    DimensionMismatch {
+        /// Expected dimension.
+        expected: usize,
+        /// Actual dimension.
+        actual: usize,
+    },
 }
 
 impl std::fmt::Display for DimValidationError {

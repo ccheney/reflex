@@ -1,3 +1,5 @@
+//! Mock L2 cache helpers (in-memory storage + mock vector DB).
+
 use crate::embedding::sinter::{SinterConfig, SinterEmbedder};
 use crate::vectordb::bq::MockBqClient;
 
@@ -6,9 +8,11 @@ use super::config::L2Config;
 use super::error::{L2CacheError, L2CacheResult};
 use super::loader::MockStorageLoader;
 
+/// Type alias for an L2 cache backed by mocks.
 pub type MockL2SemanticCache = L2SemanticCache<MockBqClient, MockStorageLoader>;
 
 impl L2SemanticCache<MockBqClient, MockStorageLoader> {
+    /// Creates a mock L2 cache and ensures the collection exists.
     pub async fn new_mock(config: L2Config) -> L2CacheResult<Self> {
         let embedder_config = SinterConfig::stub();
         let embedder =

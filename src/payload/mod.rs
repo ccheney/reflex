@@ -1,22 +1,32 @@
+//! Payload encoding/decoding helpers.
+//!
+//! Reflex uses Tauq as a compact, schema-friendly representation of JSON payloads.
+
 use serde_json::Value;
 
+/// Errors returned by Tauq parsing.
 pub use tauq::error::TauqError;
 
+/// Encodes JSON values into Tauq.
 pub struct TauqEncoder;
 
 impl TauqEncoder {
+    /// Encodes a JSON value into Tauq text.
     pub fn encode(value: &Value) -> String {
         tauq::format_to_tauq(value)
     }
 }
 
+/// Decodes Tauq text into JSON values.
 pub struct TauqDecoder;
 
 impl TauqDecoder {
+    /// Decodes Tauq into a single JSON value.
     pub fn decode(input: &str) -> Result<Value, TauqError> {
         tauq::compile_tauq(input)
     }
 
+    /// Decodes Tauq into a batch (array) or a single value wrapped as a 1-item batch.
     pub fn decode_batch(input: &str) -> Result<Vec<Value>, TauqError> {
         let value = tauq::compile_tauq(input)?;
         match value {
@@ -26,53 +36,20 @@ impl TauqDecoder {
     }
 }
 
+/// Encodes multiple JSON values into a Tauq array.
 pub struct TauqBatchEncoder;
 
 impl TauqBatchEncoder {
+    /// Encodes all values as a Tauq array.
     pub fn encode_all(values: &[Value]) -> Result<String, TauqError> {
         let array = Value::Array(values.to_vec());
         Ok(tauq::format_to_tauq(&array))
     }
 }
 
-/// Converts a payload to Tauq format if it appears to be valid JSON.
+/// Converts a payload to Tauq if it looks like JSON; otherwise returns it unchanged.
 ///
-/// # Defensive Fallback Behavior
-///
-/// This function intentionally uses a silent fallback strategy: if the payload
-/// cannot be parsed as JSON or does not appear to need Tauq encoding, the
-/// original payload is returned unchanged. This is **by design** to ensure
-/// robustness in the response path.
-///
-/// # Why Silent Fallback?
-///
-/// - **API Stability**: Errors in response formatting should never break the API.
-///   A degraded response (non-Tauq) is better than an error response.
-/// - **Graceful Handling**: Not all payloads are JSON. Plain text, XML, or
-///   already-encoded content should pass through without modification.
-/// - **Defense in Depth**: Upstream validation may have failed or been bypassed;
-///   this function acts as a safety net, not a gatekeeper.
-///
-/// # Behavior
-///
-/// - If the trimmed payload starts with `{` or `[`, attempts JSON parsing
-/// - On successful parse, encodes to Tauq format
-/// - On parse failure, returns the original payload unchanged
-/// - For non-JSON-like payloads, returns the original unchanged
-///
-/// # Operational Considerations
-///
-/// If your system expects Tauq-formatted responses, monitor for responses that
-/// are not in Tauq format. This may indicate:
-/// - Malformed JSON from upstream services
-/// - Unexpected content types in the response path
-/// - Configuration issues in payload handling
-///
-/// # Guarantees
-///
-/// This function **never errors**. It always returns a usable `String`, either:
-/// - The Tauq-encoded version of valid JSON input, or
-/// - The original payload unchanged
+/// This is a best-effort helper: it never errors.
 ///
 /// # Example
 ///

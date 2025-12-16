@@ -1,3 +1,6 @@
+//! NVMe-backed storage (simple file-per-entry layout).
+
+/// NVMe backend error types.
 pub mod error;
 
 #[cfg(test)]
@@ -20,19 +23,23 @@ const RKYV_EXTENSION: &str = "rkyv";
 const TEMP_EXTENSION: &str = "rkyv.tmp";
 
 #[derive(Debug, Clone)]
+/// Stores and retrieves [`CacheEntry`] records on disk.
 pub struct NvmeStorage {
     storage_path: PathBuf,
 }
 
 impl NvmeStorage {
+    /// Creates a storage rooted at `storage_path`.
     pub fn new(storage_path: PathBuf) -> Self {
         Self { storage_path }
     }
 
+    /// Returns the root storage directory.
     pub fn storage_path(&self) -> &Path {
         &self.storage_path
     }
 
+    /// Ensures the root storage directory exists.
     pub fn ensure_storage_path(&self) -> NvmeResult<()> {
         if !self.storage_path.exists() {
             fs::create_dir_all(&self.storage_path).map_err(|_| NvmeError::StorageUnavailable {
@@ -65,6 +72,7 @@ impl NvmeStorage {
         Ok(())
     }
 
+    /// Writes `entry` under `(tenant_id, id)` and returns an mmap handle to the bytes.
     pub fn store(&self, id: u64, entry: &CacheEntry) -> NvmeResult<MmapFileHandle> {
         let tenant_id = entry.tenant_id;
 
@@ -89,6 +97,7 @@ impl NvmeStorage {
         Ok(handle)
     }
 
+    /// Loads the `(tenant_id, id)` entry as an mmap handle.
     pub fn load(&self, id: u64, tenant_id: u64) -> NvmeResult<MmapFileHandle> {
         let path = self.entry_path(tenant_id, id);
 
@@ -103,6 +112,7 @@ impl NvmeStorage {
         Ok(handle)
     }
 
+    /// Deletes the `(tenant_id, id)` entry.
     pub fn delete(&self, id: u64, tenant_id: u64) -> NvmeResult<()> {
         let path = self.entry_path(tenant_id, id);
 
@@ -117,10 +127,12 @@ impl NvmeStorage {
         Ok(())
     }
 
+    /// Returns `true` if `(tenant_id, id)` exists.
     pub fn exists(&self, id: u64, tenant_id: u64) -> bool {
         self.entry_path(tenant_id, id).exists()
     }
 
+    /// Lists entry ids for `tenant_id`.
     pub fn list_entries(&self, tenant_id: u64) -> NvmeResult<Vec<u64>> {
         let tenant_path = self.tenant_path(tenant_id);
 
@@ -147,6 +159,7 @@ impl NvmeStorage {
         Ok(entries)
     }
 
+    /// Lists tenant ids currently present under the root directory.
     pub fn list_tenants(&self) -> NvmeResult<Vec<u64>> {
         if !self.storage_path.exists() {
             return Ok(Vec::new());
@@ -170,6 +183,7 @@ impl NvmeStorage {
         Ok(tenants)
     }
 
+    /// Removes empty tenant directories and returns the count removed.
     pub fn cleanup_empty_tenant_dirs(&self) -> NvmeResult<usize> {
         if !self.storage_path.exists() {
             return Ok(0);
@@ -194,6 +208,7 @@ impl NvmeStorage {
         Ok(removed)
     }
 
+    /// Returns basic storage stats by scanning the directory tree.
     pub fn stats(&self) -> NvmeResult<StorageStats> {
         let tenants = self.list_tenants()?;
         let mut total_entries = 0;
@@ -220,8 +235,12 @@ impl NvmeStorage {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Aggregate stats for the NVMe storage directory.
 pub struct StorageStats {
+    /// Number of tenant directories.
     pub tenant_count: usize,
+    /// Total number of entry files.
     pub entry_count: usize,
+    /// Total bytes across all entry files.
     pub total_bytes: u64,
 }

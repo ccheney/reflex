@@ -1,28 +1,75 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+/// Errors returned by vector database operations.
 pub enum VectorDbError {
+    /// Could not connect to the Qdrant endpoint.
     #[error("failed to connect to Qdrant at '{url}': {message}")]
-    ConnectionFailed { url: String, message: String },
+    ConnectionFailed {
+        /// Endpoint URL.
+        url: String,
+        /// Error message.
+        message: String,
+    },
 
+    /// Collection creation failed.
     #[error("failed to create collection '{collection}': {message}")]
-    CreateCollectionFailed { collection: String, message: String },
+    CreateCollectionFailed {
+        /// Collection name.
+        collection: String,
+        /// Error message.
+        message: String,
+    },
 
+    /// Collection does not exist.
     #[error("collection not found: {collection}")]
-    CollectionNotFound { collection: String },
+    CollectionNotFound {
+        /// Collection name.
+        collection: String,
+    },
 
+    /// Upsert failed.
     #[error("failed to upsert points to '{collection}': {message}")]
-    UpsertFailed { collection: String, message: String },
+    UpsertFailed {
+        /// Collection name.
+        collection: String,
+        /// Error message.
+        message: String,
+    },
 
+    /// Search failed.
     #[error("failed to search in '{collection}': {message}")]
-    SearchFailed { collection: String, message: String },
+    SearchFailed {
+        /// Collection name.
+        collection: String,
+        /// Error message.
+        message: String,
+    },
 
+    /// Vector dimension mismatch.
     #[error("invalid vector dimension: expected {expected}, got {actual}")]
-    InvalidDimension { expected: usize, actual: usize },
+    InvalidDimension {
+        /// Expected dimension.
+        expected: usize,
+        /// Actual dimension.
+        actual: usize,
+    },
 
+    /// Embedding bytes had the wrong length.
     #[error("invalid embedding byte length: expected {expected} bytes, got {actual}")]
-    InvalidEmbeddingBytesLength { expected: usize, actual: usize },
+    InvalidEmbeddingBytesLength {
+        /// Expected byte length.
+        expected: usize,
+        /// Actual byte length.
+        actual: usize,
+    },
 
+    /// Delete failed.
     #[error("failed to delete points from '{collection}': {message}")]
-    DeleteFailed { collection: String, message: String },
+    DeleteFailed {
+        /// Collection name.
+        collection: String,
+        /// Error message.
+        message: String,
+    },
 }

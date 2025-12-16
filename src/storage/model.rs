@@ -2,12 +2,34 @@
 
 use rkyv::{Archive, Deserialize, Serialize};
 
+/// Cached entry persisted to disk.
+///
+/// Stored as `rkyv` bytes (often memory-mapped).
+///
+/// # Example
+/// ```rust
+/// use reflex::CacheEntry;
+///
+/// let entry = CacheEntry {
+///     tenant_id: 1,
+///     context_hash: 42,
+///     timestamp: 0,
+///     embedding: vec![],
+///     payload_blob: vec![],
+/// };
+/// assert_eq!(entry.tenant_id, 1);
+/// ```
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct CacheEntry {
+    /// Tenant identifier (used for isolation).
     pub tenant_id: u64,
+    /// Hash of the conversation context.
     pub context_hash: u64,
+    /// Unix timestamp when cached.
     pub timestamp: i64,
+    /// Embedding vector bytes (little-endian f16).
     pub embedding: Vec<u8>,
+    /// Encoded response payload bytes.
     pub payload_blob: Vec<u8>,
 }
 

@@ -1,4 +1,6 @@
-//! Environment configuration.
+//! Environment-backed configuration.
+//!
+//! Most settings have defaults. Override with `REFLEX_*` environment variables.
 
 pub mod error;
 
@@ -11,23 +13,34 @@ use std::env;
 use std::net::IpAddr;
 use std::path::PathBuf;
 
+/// Server configuration loaded from environment variables.
+///
+/// Use [`Config::from_env`] to read `REFLEX_*` overrides on top of defaults.
 #[derive(Debug, Clone)]
 pub struct Config {
+    /// HTTP server port. Default: `8080`.
     pub port: u16,
 
+    /// IP address to bind to. Default: `127.0.0.1`.
     pub bind_addr: IpAddr,
 
+    /// Directory for persistent cache storage. Default: `./.data`.
     pub storage_path: PathBuf,
 
+    /// Path to the embedding model file (Sinter / GGUF).
     pub model_path: Option<PathBuf>,
 
+    /// Path to the reranker model directory (BERT + tokenizer).
     pub reranker_path: Option<PathBuf>,
 
+    /// Qdrant endpoint URL. Default: `http://localhost:6334`.
     pub qdrant_url: String,
 
+    /// Max entries in the in-memory L1 cache. Default: `10_000`.
     pub l1_capacity: u64,
 }
 
+/// Default Qdrant URL used when `REFLEX_QDRANT_URL` is not set.
 pub const DEFAULT_QDRANT_URL: &str = "http://localhost:6334";
 
 impl Default for Config {
@@ -53,6 +66,7 @@ impl Config {
     const ENV_QDRANT_URL: &'static str = "REFLEX_QDRANT_URL";
     const ENV_L1_CAPACITY: &'static str = "REFLEX_L1_CAPACITY";
 
+    /// Loads configuration from environment variables (falling back to defaults).
     pub fn from_env() -> Result<Self, ConfigError> {
         let defaults = Self::default();
 
@@ -75,6 +89,7 @@ impl Config {
         })
     }
 
+    /// Validates paths and basic invariants (does not create directories).
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.storage_path.exists() && !self.storage_path.is_dir() {
             return Err(ConfigError::NotADirectory {
@@ -103,6 +118,7 @@ impl Config {
         Ok(())
     }
 
+    /// Returns `"{bind_addr}:{port}"` (useful for logging/binding).
     pub fn socket_addr(&self) -> String {
         format!("{}:{}", self.bind_addr, self.port)
     }
