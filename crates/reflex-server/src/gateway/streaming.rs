@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::error;
 
-use crate::cache::BqSearchBackend;
+use reflex::cache::BqSearchBackend;
 use crate::gateway::adapter::adapt_openai_to_genai;
 use crate::gateway::error::GatewayError;
 

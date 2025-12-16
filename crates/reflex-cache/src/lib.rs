@@ -48,7 +48,6 @@ pub mod cache;
 pub mod config;
 pub mod constants;
 pub mod embedding;
-pub mod gateway;
 pub mod hashing;
 pub mod lifecycle;
 pub mod payload;

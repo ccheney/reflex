@@ -14,18 +14,18 @@ use std::sync::Arc;
 use tempfile::TempDir;
 use tower::ServiceExt;
 
-use crate::cache::{
+use reflex::cache::{
     BqSearchBackend, L1CacheHandle, L2Config, L2SemanticCache, NvmeStorageLoader,
     REFLEX_STATUS_HEADER, ReflexStatus, TieredCache,
 };
-use crate::embedding::RerankerConfig;
-use crate::embedding::sinter::{SinterConfig, SinterEmbedder};
+use reflex::embedding::RerankerConfig;
+use reflex::embedding::sinter::{SinterConfig, SinterEmbedder};
 use crate::gateway::create_router_with_state;
 use crate::gateway::error::GatewayError;
 use crate::gateway::payload::CachePayload;
 use crate::gateway::state::HandlerState;
-use crate::scoring::CrossEncoderScorer;
-use crate::vectordb::bq::MockBqClient;
+use reflex::scoring::CrossEncoderScorer;
+use reflex::vectordb::bq::MockBqClient;
 
 const TEST_COLLECTION_NAME: &str = "handler_test_collection";
 
@@ -187,7 +187,7 @@ async fn setup_test_state() -> (HandlerState<MockBqClient, NvmeStorageLoader>, T
     bq_client
         .ensure_bq_collection(
             TEST_COLLECTION_NAME,
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         )
         .await
         .expect("Failed to ensure collection");
@@ -225,7 +225,12 @@ async fn setup_test_state() -> (HandlerState<MockBqClient, NvmeStorageLoader>, T
 fn create_test_router<B, S>(state: HandlerState<B, S>) -> Router
 where
     B: BqSearchBackend + Clone + Send + Sync + 'static,
-    S: crate::cache::StorageLoader + crate::storage::StorageWriter + Clone + Send + Sync + 'static,
+    S: reflex::cache::StorageLoader
+        + reflex::storage::StorageWriter
+        + Clone
+        + Send
+        + Sync
+        + 'static,
 {
     create_router_with_state(state)
 }
@@ -663,12 +668,12 @@ mod spawn_index_update_tests {
         bq_client
             .ensure_bq_collection(
                 TEST_COLLECTION_NAME,
-                crate::constants::DEFAULT_VECTOR_SIZE_U64,
+                reflex::constants::DEFAULT_VECTOR_SIZE_U64,
             )
             .await
             .expect("Failed to ensure collection");
 
-        let vector: Vec<f32> = vec![0.1; crate::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
+        let vector: Vec<f32> = vec![0.1; reflex::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
 
         let result = spawn_index_update(
             bq_client.clone(),
@@ -678,7 +683,7 @@ mod spawn_index_update_tests {
             1702512000, // timestamp
             vector,
             "test/storage/key.rkyv".to_string(),
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         );
 
         assert!(result);
@@ -693,7 +698,7 @@ mod spawn_index_update_tests {
     async fn test_spawn_index_update_creates_collection_if_needed() {
         let bq_client = MockBqClient::new();
 
-        let vector: Vec<f32> = vec![0.1; crate::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
+        let vector: Vec<f32> = vec![0.1; reflex::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
         let collection_name = "new_collection";
 
         let result = spawn_index_update(
@@ -704,7 +709,7 @@ mod spawn_index_update_tests {
             1702512000,
             vector,
             "test/key.rkyv".to_string(),
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         );
 
         assert!(result);
@@ -721,12 +726,12 @@ mod spawn_index_update_tests {
         bq_client
             .ensure_bq_collection(
                 TEST_COLLECTION_NAME,
-                crate::constants::DEFAULT_VECTOR_SIZE_U64,
+                reflex::constants::DEFAULT_VECTOR_SIZE_U64,
             )
             .await
             .unwrap();
 
-        let vector: Vec<f32> = vec![0.5; crate::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
+        let vector: Vec<f32> = vec![0.5; reflex::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
         let storage_key = "tenant123/abc123def456.rkyv";
 
         let result = spawn_index_update(
@@ -737,14 +742,14 @@ mod spawn_index_update_tests {
             1702512000,
             vector,
             storage_key.to_string(),
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         );
 
         assert!(result);
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let query: Vec<f32> = vec![0.5; crate::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
+        let query: Vec<f32> = vec![0.5; reflex::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
         let results = bq_client
             .search_bq(TEST_COLLECTION_NAME, query, 10, Some(123))
             .await
@@ -1296,7 +1301,7 @@ mod direct_handler_tests {
 mod l1_cache_hit_tests {
     use super::*;
     use crate::gateway::handler::chat_completions_handler;
-    use crate::storage::CacheEntry;
+    use reflex::storage::CacheEntry;
     use axum::Json;
     use axum::extract::State;
     use axum::http::HeaderMap;
@@ -1312,10 +1317,10 @@ mod l1_cache_hit_tests {
         let payload_json = serde_json::to_string(&payload).unwrap();
 
         let entry = CacheEntry {
-            tenant_id: crate::hashing::hash_tenant_id("default"),
+            tenant_id: reflex::hashing::hash_tenant_id("default"),
             context_hash: 12345,
             timestamp: chrono::Utc::now().timestamp(),
-            embedding: vec![0u8; crate::constants::EMBEDDING_F16_BYTES],
+            embedding: vec![0u8; reflex::constants::EMBEDDING_F16_BYTES],
             payload_blob: payload_json.into_bytes(),
         };
 
@@ -1326,7 +1331,7 @@ mod l1_cache_hit_tests {
 
     #[tokio::test]
     async fn test_l1_cache_hit_with_prepopulated_data() {
-        use crate::storage::mmap::MmapFileHandle;
+        use reflex::storage::mmap::MmapFileHandle;
 
         let (state, _temp_dir) = setup_test_state().await;
 
@@ -1347,7 +1352,7 @@ mod l1_cache_hit_tests {
         let handle = MmapFileHandle::open(temp_file.path()).unwrap();
 
         let l1_key = request_hash.to_string();
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         state.tiered_cache.insert_l1(&l1_key, tenant_id, handle);
 
         let headers = HeaderMap::new();
@@ -1364,7 +1369,7 @@ mod l1_cache_hit_tests {
 
     #[tokio::test]
     async fn test_l1_cache_hit_with_invalid_payload_falls_back_to_miss() {
-        use crate::storage::mmap::MmapFileHandle;
+        use reflex::storage::mmap::MmapFileHandle;
 
         let (state, _temp_dir) = setup_test_state().await;
 
@@ -1375,10 +1380,10 @@ mod l1_cache_hit_tests {
         let request_hash = blake3::hash(&request_bytes);
 
         let entry = CacheEntry {
-            tenant_id: crate::hashing::hash_tenant_id("default"),
+            tenant_id: reflex::hashing::hash_tenant_id("default"),
             context_hash: 12345,
             timestamp: chrono::Utc::now().timestamp(),
-            embedding: vec![0u8; crate::constants::EMBEDDING_F16_BYTES],
+            embedding: vec![0u8; reflex::constants::EMBEDDING_F16_BYTES],
             payload_blob: b"not valid json at all".to_vec(),
         };
 
@@ -1393,7 +1398,7 @@ mod l1_cache_hit_tests {
         let handle = MmapFileHandle::open(temp_file.path()).unwrap();
 
         let l1_key = request_hash.to_string();
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         state.tiered_cache.insert_l1(&l1_key, tenant_id, handle);
 
         let headers = HeaderMap::new();
@@ -1409,11 +1414,11 @@ mod l1_cache_hit_tests {
 
 mod l2_l3_verification_tests {
     use super::*;
-    use crate::cache::{L1CacheHandle, L2Config, L2SemanticCache, MockStorageLoader, TieredCache};
-    use crate::embedding::sinter::{SinterConfig, SinterEmbedder};
+    use reflex::cache::{L1CacheHandle, L2Config, L2SemanticCache, MockStorageLoader, TieredCache};
+    use reflex::embedding::sinter::{SinterConfig, SinterEmbedder};
     use crate::gateway::handler::chat_completions_handler;
-    use crate::storage::CacheEntry;
-    use crate::vectordb::bq::MockBqClient;
+    use reflex::storage::CacheEntry;
+    use reflex::vectordb::bq::MockBqClient;
     use axum::Json;
     use axum::extract::State;
     use axum::http::HeaderMap;
@@ -1436,7 +1441,7 @@ mod l2_l3_verification_tests {
             tenant_id,
             context_hash,
             timestamp: chrono::Utc::now().timestamp(),
-            embedding: vec![0u8; crate::constants::EMBEDDING_F16_BYTES],
+            embedding: vec![0u8; reflex::constants::EMBEDDING_F16_BYTES],
             payload_blob: payload_json.into_bytes(),
         }
     }
@@ -1451,7 +1456,7 @@ mod l2_l3_verification_tests {
         bq_client
             .ensure_bq_collection(
                 L2_TEST_COLLECTION,
-                crate::constants::DEFAULT_VECTOR_SIZE_U64,
+                reflex::constants::DEFAULT_VECTOR_SIZE_U64,
             )
             .await
             .expect("Failed to ensure collection");
@@ -1494,7 +1499,7 @@ mod l2_l3_verification_tests {
             serde_json::from_value(request_json.clone()).unwrap();
         let semantic_text = crate::gateway::handler::semantic_text_from_request(&request);
 
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         let context_hash = 99999u64;
         let storage_key = format!("{}/test_entry.rkyv", tenant_id);
 
@@ -1538,7 +1543,7 @@ mod l2_l3_verification_tests {
         let semantic_text =
             r#"{"model":"gpt-4","messages":[{"role":"user","content":"Hello, world!"}]}"#;
 
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         let context_hash = 88888u64;
         let storage_key = format!("{}/different_entry.rkyv", tenant_id);
 
@@ -1585,7 +1590,7 @@ mod l2_l3_verification_tests {
             serde_json::from_value(request_json.clone()).unwrap();
         let semantic_text = crate::gateway::handler::semantic_text_from_request(&request);
 
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         let context_hash = 77777u64;
         let storage_key = format!("{}/invalid_payload.rkyv", tenant_id);
 
@@ -1593,7 +1598,7 @@ mod l2_l3_verification_tests {
             tenant_id,
             context_hash,
             timestamp: chrono::Utc::now().timestamp(),
-            embedding: vec![0u8; crate::constants::EMBEDDING_F16_BYTES],
+            embedding: vec![0u8; reflex::constants::EMBEDDING_F16_BYTES],
             payload_blob: b"invalid json {{{".to_vec(),
         };
         state
@@ -1631,7 +1636,7 @@ mod l2_l3_verification_tests {
             serde_json::from_value(request_json.clone()).unwrap();
         let semantic_text = crate::gateway::handler::semantic_text_from_request(&request);
 
-        let tenant_id = crate::hashing::hash_tenant_id("default");
+        let tenant_id = reflex::hashing::hash_tenant_id("default");
         let context_hash = 66666u64;
         let storage_key = format!("{}/no_storage.rkyv", tenant_id);
 
@@ -1662,14 +1667,14 @@ mod l2_l3_verification_tests {
 
 mod spawn_index_update_error_tests {
     use crate::gateway::handler::spawn_index_update;
-    use crate::vectordb::bq::MockBqClient;
+    use reflex::vectordb::bq::MockBqClient;
 
     #[tokio::test]
     async fn test_spawn_index_update_collection_ensure_failure() {
         let bq_client = MockBqClient::new();
         bq_client.poison_lock();
 
-        let vector: Vec<f32> = vec![0.1; crate::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
+        let vector: Vec<f32> = vec![0.1; reflex::constants::DEFAULT_VECTOR_SIZE_U64 as usize];
 
         let result = spawn_index_update(
             bq_client,
@@ -1679,7 +1684,7 @@ mod spawn_index_update_error_tests {
             1702512000,
             vector,
             "test/key.rkyv".to_string(),
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         );
 
         assert!(result);
@@ -1693,7 +1698,7 @@ mod spawn_index_update_error_tests {
         bq_client
             .ensure_bq_collection(
                 "test_upsert_fail",
-                crate::constants::DEFAULT_VECTOR_SIZE_U64,
+                reflex::constants::DEFAULT_VECTOR_SIZE_U64,
             )
             .await
             .unwrap();
@@ -1708,7 +1713,7 @@ mod spawn_index_update_error_tests {
             1702512000,
             wrong_dim_vector,
             "test/key.rkyv".to_string(),
-            crate::constants::DEFAULT_VECTOR_SIZE_U64,
+            reflex::constants::DEFAULT_VECTOR_SIZE_U64,
         );
 
         assert!(result);

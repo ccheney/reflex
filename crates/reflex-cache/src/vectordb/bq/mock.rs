@@ -53,8 +53,7 @@ impl MockBqClient {
     }
 
     /// Poisons the internal RwLock for testing error handling paths.
-    /// This method is only available in test builds.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "mock"))]
     pub fn poison_lock(&self) {
         use std::thread;
 

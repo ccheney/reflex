@@ -11,10 +11,10 @@ use tokio::signal;
 use reflex::cache::{L2Config, L2SemanticCache, NvmeStorageLoader, TieredCache};
 use reflex::config::Config;
 use reflex::embedding::{RerankerConfig, SinterConfig, SinterEmbedder};
-use reflex::gateway::{HandlerState, create_router_with_state};
 use reflex::lifecycle::{LifecycleConfig, LifecycleManager, build_cloud_ops};
 use reflex::scoring::CrossEncoderScorer;
 use reflex::vectordb::bq::{BQ_COLLECTION_NAME, BqBackend, BqConfig};
+use reflex_server::gateway::{HandlerState, create_router_with_state};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;

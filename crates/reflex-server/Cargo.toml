@@ -1,0 +1,56 @@
+[package]
+name = "reflex-server"
+version = "0.1.2"
+edition = "2024"
+license = "AGPL-3.0"
+repository = "https://github.com/ccheney/reflex"
+rust-version = "1.92"
+
+[lib]
+name = "reflex_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "reflex"
+path = "src/main.rs"
+
+[features]
+default = []
+cpu = ["reflex/cpu"]
+metal = ["reflex/metal"]
+cuda = ["reflex/cuda"]
+
+[dependencies]
+reflex = { package = "reflex-cache", path = "../reflex-cache" }
+
+tokio = { version = "1.48", features = ["full"] }
+mimalloc = { version = "0.1", default-features = false }
+
+axum = "0.8"
+tower-http = { version = "0.6", features = ["trace", "cors"] }
+
+blake3 = "1.6"
+rkyv = { version = "0.8", features = ["bytecheck"] }
+
+async-openai = { version = "0.31", features = ["chat-completion-types"] }
+genai = "0.4.4"
+
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures-util = "0.3.31"
+reqwest = { version = "0.12", features = ["json"] }
+uuid = { version = "1.19.0", features = ["v4", "fast-rng"] }
+chrono = "0.4.42"
+
+[dev-dependencies]
+reflex = { package = "reflex-cache", path = "../reflex-cache", features = ["mock"] }
+tempfile = "3.15"
+tower = { version = "0.5", features = ["util"] }
+hyper = { version = "1.0", features = ["full"] }
+http-body-util = "0.1"
+futures = "0.3"

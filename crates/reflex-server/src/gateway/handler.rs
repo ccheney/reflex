@@ -12,17 +12,17 @@ use futures_util::stream;
 use std::convert::Infallible;
 use tracing::{debug, error, info, instrument};
 
-use crate::cache::{
+use reflex::cache::{
     BqSearchBackend, REFLEX_STATUS_HEADER, ReflexStatus, StorageLoader, TieredLookupResult,
 };
 use crate::gateway::error::GatewayError;
 use crate::gateway::payload::CachePayload;
 use crate::gateway::state::HandlerState;
 use crate::gateway::streaming::handle_streaming_request;
-use crate::payload::TauqEncoder;
-use crate::scoring::VerificationResult;
-use crate::storage::CacheEntry;
-use crate::vectordb::{VectorPoint, generate_point_id};
+use reflex::payload::TauqEncoder;
+use reflex::scoring::VerificationResult;
+use reflex::storage::{ArchivedCacheEntry, CacheEntry, StorageWriter};
+use reflex::vectordb::{VectorPoint, generate_point_id};
 
 #[instrument(skip(state, request, headers), fields(model = tracing::field::Empty))]
 pub async fn chat_completions_handler<B, S>(
@@ -32,7 +32,7 @@ pub async fn chat_completions_handler<B, S>(
 ) -> Result<Response, GatewayError>
 where
     B: BqSearchBackend + Clone + Send + Sync + 'static,
-    S: StorageLoader + crate::storage::StorageWriter + Clone + Send + Sync + 'static,
+    S: StorageLoader + StorageWriter + Clone + Send + Sync + 'static,
 {
     validate_no_legacy_fields(&request)?;
     let request: CreateChatCompletionRequest = serde_json::from_value(request)
@@ -48,14 +48,14 @@ where
     let request_bytes = serde_json::to_vec(&request)
         .map_err(|e| GatewayError::InvalidRequest(format!("Serialization failed: {}", e)))?;
     let request_hash = blake3::hash(&request_bytes);
-    let request_hash_u64 = crate::hashing::hash_to_u64(request_hash.as_bytes());
+    let request_hash_u64 = reflex::hashing::hash_to_u64(request_hash.as_bytes());
 
     debug!(hash = %request_hash, "Processing chat completion request");
 
     let semantic_text = semantic_text_from_request(&request);
 
     let token = _auth_token.unwrap_or_else(|| "default".to_string());
-    let tenant_id_hash = crate::hashing::hash_tenant_id(&token);
+    let tenant_id_hash = reflex::hashing::hash_tenant_id(&token);
 
     let stream_requested = request.stream.unwrap_or(false);
 
@@ -91,7 +91,7 @@ where
             info!("L1 Cache Hit");
             let archived = l1_result
                 .handle()
-                .access_archived::<crate::storage::ArchivedCacheEntry>()
+                .access_archived::<ArchivedCacheEntry>()
                 .map_err(|e| GatewayError::CacheLookupFailed(e.to_string()))?;
 
             let raw_payload = String::from_utf8_lossy(&archived.payload_blob);
@@ -464,7 +464,7 @@ where
             .upsert_points(
                 &collection_name,
                 vec![point],
-                crate::vectordb::WriteConsistency::Eventual,
+                reflex::vectordb::WriteConsistency::Eventual,
             )
             .await
         {

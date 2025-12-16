@@ -2,8 +2,8 @@ use genai::Client;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::cache::{BqSearchBackend, StorageLoader, TieredCache};
-use crate::scoring::CrossEncoderScorer;
+use reflex::cache::{BqSearchBackend, StorageLoader, TieredCache};
+use reflex::scoring::CrossEncoderScorer;
 
 #[derive(Clone)]
 pub struct HandlerState<
